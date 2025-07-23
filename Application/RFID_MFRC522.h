@@ -70,7 +70,7 @@ typedef enum {
 	MI_NOTAGERR,
 	MI_ERR,
 	MI_TIMEOUT,
-} TM_MFRC522_Status_t;
+} RFID_MFRC522_Status_t;
 
 /* MFRC522 Commands */
 #define PCD_IDLE						0x00   //NO action; Cancel the current command
@@ -116,7 +116,8 @@ typedef enum {
 #define MFRC522_REG_RESERVED01			0x0F
 //Page 1: Command
 #define MFRC522_REG_RESERVED10			0x10
-#define ModeReg							0x11   // defines general modes for transmitting and receiving
+//#define ModeReg							0x11   // defines general modes for transmitting and receiving
+#define MFRC522_REG_MODE				0x11   // defines general modes for transmitting and receiving
 #define MFRC522_REG_TX_MODE				0x12   // defines transmission data rate and framing
 #define MFRC522_REG_RX_MODE				0x13   // defines reception data rate and framing
 #define MFRC522_REG_TX_CONTROL			0x14   // controls the logical behavior of the antenna driver pins TX1 and TX2
@@ -179,7 +180,7 @@ typedef enum {
  * Prepare MFRC522 to work with RFIDs
  *
  */
-extern void RFID_RC522_Init(void);
+void RFID_MFRC522_init(void);
 
 /**
  * Check for RFID card existance
@@ -191,7 +192,7 @@ extern void RFID_RC522_Init(void);
  *
  * Returns MI_OK if card is detected
  */
-extern TM_MFRC522_Status_t TM_MFRC522_Check(uint8_t* id, uint8_t* type);
+RFID_MFRC522_Status_t RFID_MFRC522_check(uint8_t* id, uint8_t* type);
 
 /**
  * Compare 2 RFID ID's
@@ -205,31 +206,32 @@ extern TM_MFRC522_Status_t TM_MFRC522_Check(uint8_t* id, uint8_t* type);
  *
  * Returns MI_OK if IDs are the same, or MI_ERR if not
  */
-extern TM_MFRC522_Status_t TM_MFRC522_Compare(uint8_t* CardID, uint8_t* CompareID);
+RFID_MFRC522_Status_t RFID_MFRC522_Compare(uint8_t* CardID, uint8_t* CompareID);
 
 /**
  * Private functions
  */
 //extern void TM_SPI_Init(SPI_TypeDef* SPIx, TM_SPI_PinsPack_t pinspack);
 //extern void TM_MFRC522_InitPins(void);
-extern void TM_MFRC522_WriteRegister(uint8_t addr, uint8_t val);
-extern uint8_t TM_MFRC522_ReadRegister(uint8_t addr);
-extern void TM_MFRC522_SetBitMask(uint8_t reg, uint8_t mask);
-extern void TM_MFRC522_ClearBitMask(uint8_t reg, uint8_t mask);
-extern void TM_MFRC522_AntennaOn(void);
-extern void TM_MFRC522_AntennaOff(void);
-extern void TM_MFRC522_Reset(void);
-extern TM_MFRC522_Status_t TM_MFRC522_Request(uint8_t reqMode, uint8_t* TagType);
-extern TM_MFRC522_Status_t TM_MFRC522_ToCard(uint8_t command, uint8_t* sendData, uint8_t sendLen, uint8_t* backData, uint16_t* backLen);
-extern TM_MFRC522_Status_t TM_MFRC522_Anticoll(uint8_t* serNum);
-extern TM_MFRC522_Status_t TM_MFRC522_CalculateCRC(uint8_t* pIndata, uint8_t len, uint8_t* pOutData);
-extern TM_MFRC522_Status_t TM_MFRC522_SelectTag(uint8_t* serNum, uint8_t* sak);
-extern TM_MFRC522_Status_t TM_MFRC522_Auth(uint8_t authMode, uint8_t BlockAddr, uint8_t* Sectorkey, uint8_t* serNum);
-extern TM_MFRC522_Status_t TM_MFRC522_Read(uint8_t blockAddr, uint8_t* recvData);
-extern TM_MFRC522_Status_t TM_MFRC522_Write(uint8_t blockAddr, uint8_t* writeData);
-extern void TM_MFRC522_Halt(void);
-extern void TM_MFRC522_CS_Write(GPIO_PinState val);
-extern void bin_to_strhex(unsigned char *bin, unsigned int binsz, char **result);
+//extern void MFRC522_WriteRegister(uint8_t addr, uint8_t val);
+//extern uint8_t TM_MFRC522_ReadRegister(uint8_t addr);
+//extern void setBitMask(uint8_t reg, uint8_t mask);
+//extern void TM_MFRC522_ClearBitMask(uint8_t reg, uint8_t mask);
+//extern void TM_MFRC522_AntennaOn(void);
+//extern void TM_MFRC522_AntennaOff(void);
+//extern void TM_MFRC522_Reset(void);
+//extern RFID_MFRC522_Status_t TM_MFRC522_Request(uint8_t reqMode, uint8_t* TagType);
+//extern RFID_MFRC522_Status_t TM_MFRC522_ToCard(uint8_t command, uint8_t* sendData, uint8_t sendLen, uint8_t* backData, uint16_t* backLen);
+//extern RFID_MFRC522_Status_t TM_MFRC522_Anticoll(uint8_t* serNum);
+//extern RFID_MFRC522_Status_t TM_MFRC522_CalculateCRC(uint8_t* pIndata, uint8_t len, uint8_t* pOutData);
+//extern RFID_MFRC522_Status_t TM_MFRC522_SelectTag(uint8_t* serNum, uint8_t* sak);
+//extern RFID_MFRC522_Status_t TM_MFRC522_Auth(uint8_t authMode, uint8_t BlockAddr, uint8_t* Sectorkey, uint8_t* serNum);
+//extern RFID_MFRC522_Status_t TM_MFRC522_Read(uint8_t blockAddr, uint8_t* recvData);
+//extern RFID_MFRC522_Status_t TM_MFRC522_Write(uint8_t blockAddr, uint8_t* writeData);
+//extern void TM_MFRC522_Halt(void);
+//extern void bin_to_strhex(unsigned char *bin, unsigned int binsz, char **result);
+
+void RFID_MFRC522_dumpVersionToSerial(void);
 
 //#define SPI_IS_BUSY(SPIx) (((SPIx)->SR & (SPI_SR_TXE | SPI_SR_RXNE)) == 0 || ((SPIx)->SR & SPI_SR_BSY))
 //#define SPI_WAIT(SPIx)            while (SPI_IS_BUSY(SPIx))

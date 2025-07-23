@@ -15,6 +15,8 @@ extern "C" {
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
 
+void config_SPI_before_IMU (void);
+void config_SPI_before_RFID (void);
 
 
 void my_setup (void);

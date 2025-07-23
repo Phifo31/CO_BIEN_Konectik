@@ -28,10 +28,9 @@ static sh2_SensorValue_t *_sensor_value = NULL;
 #define SPI_READ_TIMEOUT	0x1000
 #define SPI_WRITE_TIMEOUT	0x1000
 
-#define DEBUG 18
-#undef DEBUG
+//#define PRINT_DEBUG 18
 static void debug_println(char *str) {
-#ifdef DEBUG
+#ifdef PRINT_DEBUG
 	printf("BNO08x : %s \n\r", str);
 #endif
 }
