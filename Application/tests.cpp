@@ -13,9 +13,29 @@
 #include "application.h"
 #include "touch_button.h"
 
+//                         Red, Green, Blue
 LEDS_color_t COLOR_RED = { 0xFF, 0x00, 0x00 };
 LEDS_color_t COLOR_GREEN = { 0x00, 0xFF, 0x00 };
 LEDS_color_t COLOR_BLUE = { 0x00, 0x00, 0xFF };
+LEDS_color_t COLOR_PINK = { 0xFF, 0x00, 0xFF };
+LEDS_color_t COLOR_WHITE = { 0xFF, 0xFF, 0xFF };
+
+uint16_t msec2sec(uint32_t n, uint16_t *reste) {
+
+    // Récupéré ici mais je ne comprend rien
+    // https://stackoverflow.com/questions/1294885/convert-milliseconds-to-seconds-in-c
+    //  uint32_t q, r, t;
+    //n = n + 500; pourquoi ?
+    //t = (n >> 7) + (n >> 8) + (n >> 12);
+    //q = (n >> 1) + t + (n >> 15) + (t >> 11) + (t >> 14);
+    //q = q >> 9;
+    //r = n - q*1000;
+    //return q + ((r + 24) >> 10);
+
+    uint32_t q = n / 1000;
+    *reste = n - 1000 * q;
+    return (uint16_t) q;
+}
 
 // Les leds de la carte STM32 et du bouton à l'adresse choisie doivent clignoter
 void testHardware_i2cSlave(void) {
@@ -199,6 +219,96 @@ void testDriver_button_and_leds(void) {
     }
 }
 
+#define BOUTON_NUM_1    0x38
+#define BOUTON_NUM_2    0x48
+
+void TestIntegration_button_and_leds(void) {
+    uint16_t seconds, reste = 0;
+    bool state_button1 = false;
+    bool state_button2 = false;
+    uint8_t color_state = 0;
+
+    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_1, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_PINK);
+
+    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_2, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_PINK);
+
+    printf("\nTest boutons tactiles et leds - version 1.0 : 23/09/2025\n");
+
+    while (1) {
+        if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
+            uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
+            seconds = msec2sec(HAL_GetTick(), &reste);
+            printf("%05u:%03u - Caractère reçu : %c\n", seconds, reste, receive_char);
+            if (receive_char == 'c') {
+                TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_1, ON);
+                TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_2, ON);
+                TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_1, 100);
+                TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_2, 100);
+                switch (color_state) {
+                case 0:
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_PINK);
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_PINK);
+                    color_state++;
+                    break;
+                case 1:
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_RED);
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_RED);
+                    color_state++;
+                    break;
+                case 2:
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_BLUE);
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_BLUE);
+                    color_state++;
+                    break;
+                case 3:
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_GREEN);
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_GREEN);
+                    color_state++;
+                    break;
+                case 4:
+                default:
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_WHITE);
+                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_WHITE);
+                    color_state = 0;
+                    break;
+                }
+            }
+        }
+
+        if (state_button1 == false) {
+            if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_1) == true) {
+                state_button1 = true;
+                seconds = msec2sec(HAL_GetTick(), &reste);
+                printf("%05u:%03u - button 1 = true\n", seconds, reste);
+            }
+        } else if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_1) == false) {
+            state_button1 = false;
+            seconds = msec2sec(HAL_GetTick(), &reste);
+            printf("%05u:%03u - button 1 = false\n", seconds, reste);
+        }
+
+        if (state_button2 == false) {
+            if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_2) == true) {
+                state_button2 = true;
+                seconds = msec2sec(HAL_GetTick(), &reste);
+                printf("%05u:%03u - button 2 = true\n", seconds, reste);
+            }
+        } else if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_2) == false) {
+            state_button2 = false;
+            seconds = msec2sec(HAL_GetTick(), &reste);
+            printf("%05u:%03u - button 2 = false\n", seconds, reste);
+        }
+
+        HAL_Delay(250);
+    }
+}
+
 // Inclusion de la bibliothèque Arduino adafruit /Adafruit_BNO08x
 
 #include "GPIO_Pin.h"
@@ -356,8 +466,9 @@ void tests_unitaires(void) {
 //testDriver_button_and_leds ();
 //testIMU_connection();
     //test_RFID_connection();
-    test_IMU_and_RFID_communication();
+//test_IMU_and_RFID_communication();
 
-Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
+//Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
+    TestIntegration_button_and_leds();
 
 }
