@@ -325,8 +325,8 @@ static GPIO_Pin imu_irq(IMU_IRQ_GPIO_Port, IMU_IRQ_Pin);
 Adafruit_BNO08x bno08x(&hspi1, imu_reset, imu_cs, imu_irq);
 sh2_SensorValue_t sensorValue;
 
-#define MOTION_THRESHOLD  0.01f   // seuil de variation (à ajuster)
-#define IMMOBILE_TIME_MS 2000    // temps d'immobilité avant validation (ms)
+#define MOTION_THRESHOLD  0.01f   // Variation threshold(à ajuster)
+#define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
 //Function to calculate the diff between 2 quaternions
 float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
@@ -464,7 +464,13 @@ void test_IMU_and_RFID_communication(void) {
         printf("Could not enable game vector\n\r");
     }
 
+    sh2_Quaternion lastQuat = {0};
+    bool firstRead = true;
+    uint32_t lastMotionTime = HAL_GetTick();
+    bool isImmobile = false;
+
     while (1) {
+        //Reading RFID
         uint8_t id[10];
         uint8_t type[10];
 
@@ -474,21 +480,39 @@ void test_IMU_and_RFID_communication(void) {
             printf("MRFC522 : Carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
         }
 
+        //Reading IMU
         config_SPI_before_IMU();
         if (bno08x.getSensorEvent(&sensorValue)) {
-            switch (sensorValue.sensorId) {
-            case SH2_GAME_ROTATION_VECTOR:
-                printf("Game Rotation Vector - r : %0.3f", sensorValue.un.gameRotationVector.real);
-                printf(" i : %0.3f", sensorValue.un.gameRotationVector.i);
-                printf(" j : %0.3f", sensorValue.un.gameRotationVector.j);
-                printf(" k : %0.3f \n\r", sensorValue.un.gameRotationVector.k);
-                break;
+            if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
+                sh2_Quaternion q = sensorValue.un.gameRotationVector;
+
+                if (!firstRead) {
+                    float diff = quaternionDiff(q, lastQuat);
+
+                    if (diff > MOTION_THRESHOLD) {
+                        lastMotionTime = HAL_GetTick();
+                        if (isImmobile) {
+                            printf("MOUVEMENT détecté !\n\r");
+                            isImmobile = false;
+                        }
+                    } else {
+                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
+                            isImmobile = true;
+                            printf("IMMOBILE depuis %lu ms\n\r", IMMOBILE_TIME_MS);
+                        }
+                    }
+                } else {
+                    firstRead = false;
+                    lastMotionTime = HAL_GetTick();
+                }
+
+                lastQuat = q;
             }
         }
 
         HAL_Delay(250);
     }
-}
+ 
 
 /**
  *
