@@ -314,12 +314,27 @@ void TestIntegration_button_and_leds(void) {
 #include "GPIO_Pin.h"
 #include "myAdafruit_BNO08x.h"
 
+#include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+
 static GPIO_Pin imu_reset(IMU_RST_GPIO_Port, IMU_RST_Pin);
 static GPIO_Pin imu_cs(IMU_CS_GPIO_Port, IMU_CS_Pin);
 static GPIO_Pin imu_irq(IMU_IRQ_GPIO_Port, IMU_IRQ_Pin);
 
 Adafruit_BNO08x bno08x(&hspi1, imu_reset, imu_cs, imu_irq);
 sh2_SensorValue_t sensorValue;
+
+#define MOTION_THRESHOLD  0.01f   // seuil de variation (à ajuster)
+#define IMMOBILE_TIME_MS 2000    // temps d'immobilité avant validation (ms)
+
+//Function to calculate the diff between 2 quaternions
+float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
+		float dr = q1.real - q2.real;
+		float di = q1.i - q2.i;
+		float dj = q1.j - q2.j;
+		float dk = q1.k - q2.k;
+	    return sqrtf(dr*dr + di*di + dj*dj + dk*dk); }
 
 void testIMU_connection(void) {
 //	int16_t i = 0;
@@ -350,22 +365,43 @@ void testIMU_connection(void) {
         printf("Could not enable game vector\n\r");
     }
 
+    sh2_Quaternion lastQuat = {0};
+    bool firstRead = true;
+    uint32_t lastMotionTime = HAL_GetTick();
+    bool isImmobile = false;
+
     while (1) {
         if (bno08x.getSensorEvent(&sensorValue)) {
+            if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
+                sh2_Quaternion q = sensorValue.un.gameRotationVector;
 
-            switch (sensorValue.sensorId) {
+                if (!firstRead) {
+                    float diff = quaternionDiff(q, lastQuat);
 
-            case SH2_GAME_ROTATION_VECTOR:
-                printf("Game Rotation Vector - r : %0.3f", sensorValue.un.gameRotationVector.real);
-                printf(" i : %0.3f", sensorValue.un.gameRotationVector.i);
-                printf(" j : %0.3f", sensorValue.un.gameRotationVector.j);
-                printf(" k : %0.3f \n\r", sensorValue.un.gameRotationVector.k);
-                break;
+                    if (diff > MOTION_THRESHOLD) {
+                        lastMotionTime = HAL_GetTick();
+                        if (isImmobile) {
+                            printf("MOUVEMENT détecté !\n\r");
+                            isImmobile = false;
+                        }
+                    } else {
+                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
+                            isImmobile = true;
+                            printf("IMMOBILE depuis %lu ms\n\r", IMMOBILE_TIME_MS);
+                        }
+                    }
+                } else {
+                    firstRead = false;
+                    lastMotionTime = HAL_GetTick();
+                }
+
+                lastQuat = q;
             }
         }
         HAL_Delay(250);
     }
 }
+
 
 #include "RFID_MFRC522.h"
 
