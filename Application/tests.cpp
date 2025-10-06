@@ -22,7 +22,7 @@ LEDS_color_t COLOR_WHITE = { 0xFF, 0xFF, 0xFF };
 
 uint16_t msec2sec(uint32_t n, uint16_t *reste) {
 
-    // Récupéré ici mais je ne comprend rien
+    // Récupéré là mais je ne comprend rien
     // https://stackoverflow.com/questions/1294885/convert-milliseconds-to-seconds-in-c
     //  uint32_t q, r, t;
     //n = n + 500; pourquoi ?
@@ -32,6 +32,7 @@ uint16_t msec2sec(uint32_t n, uint16_t *reste) {
     //r = n - q*1000;
     //return q + ((r + 24) >> 10);
 
+    // Donc voici ma version
     uint32_t q = n / 1000;
     *reste = n - 1000 * q;
     return (uint16_t) q;
@@ -330,11 +331,12 @@ sh2_SensorValue_t sensorValue;
 
 //Function to calculate the diff between 2 quaternions
 float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
-		float dr = q1.real - q2.real;
-		float di = q1.i - q2.i;
-		float dj = q1.j - q2.j;
-		float dk = q1.k - q2.k;
-	    return sqrtf(dr*dr + di*di + dj*dj + dk*dk); }
+    double dr = q1.x - q2.x;
+    double di = q1.y - q2.y;
+    double dj = q1.z - q2.z;
+    double dk = q1.w - q2.w;
+    return ((float) sqrt(dr * dr + di * di + dj * dj + dk * dk));
+}
 
 void testIMU_connection(void) {
 //	int16_t i = 0;
@@ -365,7 +367,7 @@ void testIMU_connection(void) {
         printf("Could not enable game vector\n\r");
     }
 
-    sh2_Quaternion lastQuat = {0};
+    sh2_Quaternion lastQuat = { 0 };
     bool firstRead = true;
     uint32_t lastMotionTime = HAL_GetTick();
     bool isImmobile = false;
@@ -373,7 +375,11 @@ void testIMU_connection(void) {
     while (1) {
         if (bno08x.getSensorEvent(&sensorValue)) {
             if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
-                sh2_Quaternion q = sensorValue.un.gameRotationVector;
+                sh2_Quaternion q;
+                q.x = sensorValue.un.gameRotationVector.i;
+                q.y = sensorValue.un.gameRotationVector.j;
+                q.z = sensorValue.un.gameRotationVector.k;
+                q.w = sensorValue.un.gameRotationVector.real;
 
                 if (!firstRead) {
                     float diff = quaternionDiff(q, lastQuat);
@@ -387,7 +393,7 @@ void testIMU_connection(void) {
                     } else {
                         if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
                             isImmobile = true;
-                            printf("IMMOBILE depuis %lu ms\n\r", IMMOBILE_TIME_MS);
+                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
                         }
                     }
                 } else {
@@ -401,7 +407,6 @@ void testIMU_connection(void) {
         HAL_Delay(250);
     }
 }
-
 
 #include "RFID_MFRC522.h"
 
@@ -464,7 +469,7 @@ void test_IMU_and_RFID_communication(void) {
         printf("Could not enable game vector\n\r");
     }
 
-    sh2_Quaternion lastQuat = {0};
+    sh2_Quaternion lastQuat = { 0 };
     bool firstRead = true;
     uint32_t lastMotionTime = HAL_GetTick();
     bool isImmobile = false;
@@ -484,7 +489,11 @@ void test_IMU_and_RFID_communication(void) {
         config_SPI_before_IMU();
         if (bno08x.getSensorEvent(&sensorValue)) {
             if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
-                sh2_Quaternion q = sensorValue.un.gameRotationVector;
+                sh2_Quaternion q;
+                q.x = sensorValue.un.gameRotationVector.i;
+                q.y = sensorValue.un.gameRotationVector.j;
+                q.z = sensorValue.un.gameRotationVector.k;
+                q.w = sensorValue.un.gameRotationVector.real;
 
                 if (!firstRead) {
                     float diff = quaternionDiff(q, lastQuat);
@@ -498,7 +507,7 @@ void test_IMU_and_RFID_communication(void) {
                     } else {
                         if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
                             isImmobile = true;
-                            printf("IMMOBILE depuis %lu ms\n\r", IMMOBILE_TIME_MS);
+                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
                         }
                     }
                 } else {
@@ -512,7 +521,97 @@ void test_IMU_and_RFID_communication(void) {
 
         HAL_Delay(250);
     }
- 
+}
+
+// Tests CAN BUS
+
+FDCAN_TxHeaderTypeDef txHeader;
+FDCAN_RxHeaderTypeDef rxHeader;
+
+uint8_t txData[8];
+uint8_t rxData[8];
+
+uint32_t txMailBox;
+
+//void HAL_GPIO_EXTI_Callback (uint16_t gpio_pin) {
+//    if (gpio_pin == GPIO_PIN_??) {
+//        txData [0] = 100; // ms delay
+//        txData [1] = 10;  // nb loop
+//
+//        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, &txData);
+//    }
+//}
+
+#include "can_bus.h"
+
+CAN_BUS can_bus(0x431);
+
+void test_CAN_BUS_send_only(void) {
+    can_bus.begin();
+
+    uint8_t toSend[5];
+    toSend[0] = 0x12;
+    toSend[1] = 0x34;
+
+    uint8_t count = 0;
+    while (1) {
+        toSend[4] = toSend[3] = toSend[2] = count++;
+        can_bus.send(toSend, 5);
+        HAL_Delay(500);
+    }
+}
+
+uint16_t can_bus_callback_led(uint16_t sender, uint8_t len, uint8_t data[5]) {
+    if (data[0] == 0)
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+    else
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+
+    return 0;
+}
+
+uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t len, uint8_t data[5]) {
+    switch (len) {
+    case 1:
+        printf("%04X [%d] %02X \r\n", sender, len, data[0]);
+        break;
+    case 2:
+        printf("%04X [%d] %02X %02X \r\n", sender, len, data[0], data[1]);
+        break;
+    case 3:
+        printf("%04X [%d] %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2]);
+        break;
+    case 4:
+        printf("%04X [%d] %02X %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2], data[3]);
+        break;
+    case 5:
+        printf("%04X [%d] %02X %02X %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2], data[3], data[4]);
+        break;
+    default:
+        printf("Erreur \r\n");
+        break;
+    }
+    return 0;
+}
+
+void test_CAN_BUS_send_receive(void) {
+    can_bus.begin();
+
+    uint8_t toSend[5];
+    toSend[0] = 0x12;
+    toSend[1] = 0x34;
+
+    can_bus.register_callback_function(0x1234, can_bus_callback_led);
+    can_bus.register_callback_function(0x5678, can_bus_callback_uart_tx);
+
+    uint8_t count = 0;
+    while (1) {
+        printf ("count = %d \n\r", count);
+        toSend[4] = toSend[3] = toSend[2] = count++;
+        can_bus.send(toSend, 5);
+        HAL_Delay(2500);
+    }
+}
 
 /**
  *
@@ -524,11 +623,16 @@ void tests_unitaires(void) {
 //testDriver_RGB_LEDS();	// Modification de l'intensité et des couleurs des leds RGB
 //testDriver_scan_button ();
 //testDriver_button_and_leds ();
-//testIMU_connection();
-    //test_RFID_connection();
+//test_CAN_BUS_send_only();
+    test_CAN_BUS_send_receive ();
+
+    //testIMU_connection();
+
+//test_RFID_connection();
 //test_IMU_and_RFID_communication();
 
 //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
-    TestIntegration_button_and_leds();
+//    TestIntegration_button_and_leds();
 
 }
+
