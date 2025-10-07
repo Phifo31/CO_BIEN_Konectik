@@ -26,9 +26,20 @@
  */
 
 //#include "Arduino.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "sh2.h"
 #include "sh2_SensorValue.h"
 #include "sh2_err.h"
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+
 //#include <Adafruit_BusIO_Register.h>
 //#include <Adafruit_I2CDevice.h>
 //#include <Adafruit_Sensor.h>
