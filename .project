@@ -32,44 +32,9 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Adafruit_BNO08x/sh2.c</name>
-			<type>1</type>
-			<locationURI>WORKSPACE_LOC/Adafruit_BNO08x/src/sh2.c</locationURI>
-		</link>
-		<link>
-			<name>Adafruit_BNO08x/sh2_SensorValue.c</name>
-			<type>1</type>
-			<locationURI>WORKSPACE_LOC/Adafruit_BNO08x/src/sh2_SensorValue.c</locationURI>
-		</link>
-		<link>
-			<name>Adafruit_BNO08x/sh2_util.c</name>
-			<type>1</type>
-			<locationURI>WORKSPACE_LOC/Adafruit_BNO08x/src/sh2_util.c</locationURI>
-		</link>
-		<link>
-			<name>Adafruit_BNO08x/shtp.c</name>
-			<type>1</type>
-			<locationURI>WORKSPACE_LOC/Adafruit_BNO08x/src/shtp.c</locationURI>
-		</link>
-		<link>
-			<name>Application/Adafruit_BNO085/sh2.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2.c</locationURI>
-		</link>
-		<link>
-			<name>Application/Adafruit_BNO085/sh2_SensorValue.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2_SensorValue.c</locationURI>
-		</link>
-		<link>
-			<name>Application/Adafruit_BNO085/sh2_util.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2_util.c</locationURI>
-		</link>
-		<link>
-			<name>Application/Adafruit_BNO085/shtp.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/shtp.c</locationURI>
+			<name>Adafruit_BNO08x/src</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

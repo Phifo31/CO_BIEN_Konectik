@@ -9,8 +9,21 @@
 
 #include "main.h"
 #include "../../Common/common_data.h"
+#include "tests.h"
+#include "can_bus.h"
 
 #include "application.h"
+
+// Déclarations externes
+extern Adafruit_BNO08x bno08x;
+
+// --- Mapping des broches IMU ---
+#define BNO08X_CS_Pin     IMU_CS_Pin
+#define BNO08X_CS_Port    IMU_CS_GPIO_Port
+#define BNO08X_INT_Pin    IMU_IRQ_Pin
+#define BNO08X_INT_Port   IMU_IRQ_GPIO_Port
+#define BNO08X_RESET_Pin  IMU_RST_Pin
+#define BNO08X_RESET_Port IMU_RST_GPIO_Port
 
 
 void tests_unitaires(void);
@@ -61,12 +74,22 @@ void config_SPI_before_RFID (void){
 
 
 void my_setup(void) {
+		printf("Initialisation IMU...\n");
+
+	    // Configurer SPI pour l’IMU
+	    config_SPI_before_IMU();
+
+	    // Faire le reset matériel du BNO08x
+	    HAL_GPIO_WritePin(BNO08X_RESET_Port, BNO08X_RESET_Pin, GPIO_PIN_RESET);
+	    HAL_Delay(10);
+	    HAL_GPIO_WritePin(BNO08X_RESET_Port, BNO08X_RESET_Pin, GPIO_PIN_SET);
+	    HAL_Delay(100);
+
+	    printf("Reset IMU effectué.\n");
 
 }
 
 void my_loop(void) {
-
 	tests_unitaires();
-
 }
 

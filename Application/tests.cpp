@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 
+#include "tests.h"
+
 #include "main.h"
 #include "../../Common/common_data.h"
 
@@ -326,16 +328,20 @@ static GPIO_Pin imu_irq(IMU_IRQ_GPIO_Port, IMU_IRQ_Pin);
 Adafruit_BNO08x bno08x(&hspi1, imu_reset, imu_cs, imu_irq);
 sh2_SensorValue_t sensorValue;
 
-#define MOTION_THRESHOLD  0.01f   // Variation threshold(à ajuster)
+#define MOTION_THRESHOLD  0.01  // Variation threshold(à ajuster)
 #define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
-//Function to calculate the diff between 2 quaternions
-float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
-    double dr = q1.x - q2.x;
-    double di = q1.y - q2.y;
-    double dj = q1.z - q2.z;
-    double dk = q1.w - q2.w;
-    return ((float) sqrt(dr * dr + di * di + dj * dj + dk * dk));
+//Function to calculate the diff between 2 quaternions, if one is > threshold, we have motion
+bool quaternionHasMotion(sh2_Quaternion q1, sh2_Quaternion q2, float threshold) {
+    float dx = fabsf(q1.x - q2.x);
+    float dy = fabsf(q1.y - q2.y);
+    float dz = fabsf(q1.z - q2.z);
+    float dw = fabsf(q1.w - q2.w);
+
+    // Debug optionnel :
+    // printf("dx=%.5f dy=%.5f dz=%.5f dw=%.5f\n\r", dx, dy, dz, dw);
+
+    return (dx > threshold || dy > threshold || dz > threshold || dw > threshold);
 }
 
 void testIMU_connection(void) {
@@ -367,13 +373,18 @@ void testIMU_connection(void) {
         printf("Could not enable game vector\n\r");
     }
 
+    HAL_Delay(1000);  //wait for the sensor to prepare the reports
+
     sh2_Quaternion lastQuat = { 0 };
     bool firstRead = true;
     uint32_t lastMotionTime = HAL_GetTick();
     bool isImmobile = false;
+    //printf("isImmobile = %s\n", isImmobile ? "true" : "false"); // Test debug
 
     while (1) {
+    	//printf("Here"); //Utilisé pour debug
         if (bno08x.getSensorEvent(&sensorValue)) {
+        	//printf("Event reçu !\n\r"); //Utilisé pour debug
             if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
                 sh2_Quaternion q;
                 q.x = sensorValue.un.gameRotationVector.i;
@@ -382,20 +393,19 @@ void testIMU_connection(void) {
                 q.w = sensorValue.un.gameRotationVector.real;
 
                 if (!firstRead) {
-                    float diff = quaternionDiff(q, lastQuat);
-
-                    if (diff > MOTION_THRESHOLD) {
-                        lastMotionTime = HAL_GetTick();
-                        if (isImmobile) {
-                            printf("MOUVEMENT détecté !\n\r");
-                            isImmobile = false;
-                        }
-                    } else {
-                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
-                            isImmobile = true;
-                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
-                        }
-                    }
+                	bool motionDetected = quaternionHasMotion(q, lastQuat, MOTION_THRESHOLD);
+                	        if (motionDetected) {
+                	              lastMotionTime = HAL_GetTick();
+                	              if (isImmobile) {
+                	                      printf("MOUVEMENT détecté !\n\r");
+                	                      isImmobile = false;
+                	              }
+                	        } else {
+                	              if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
+                	                      isImmobile = true;
+                	                      printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
+                	              }
+                	        }
                 } else {
                     firstRead = false;
                     lastMotionTime = HAL_GetTick();
@@ -404,7 +414,7 @@ void testIMU_connection(void) {
                 lastQuat = q;
             }
         }
-        HAL_Delay(250);
+        HAL_Delay(50);
     }
 }
 
@@ -468,6 +478,7 @@ void test_IMU_and_RFID_communication(void) {
     if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR)) {
         printf("Could not enable game vector\n\r");
     }
+    HAL_Delay(1000);  //wait for the sensor to prepare the reports
 
     sh2_Quaternion lastQuat = { 0 };
     bool firstRead = true;
@@ -496,20 +507,20 @@ void test_IMU_and_RFID_communication(void) {
                 q.w = sensorValue.un.gameRotationVector.real;
 
                 if (!firstRead) {
-                    float diff = quaternionDiff(q, lastQuat);
+                	bool motionDetected = quaternionHasMotion(q, lastQuat, MOTION_THRESHOLD);
 
-                    if (diff > MOTION_THRESHOLD) {
-                        lastMotionTime = HAL_GetTick();
-                        if (isImmobile) {
-                            printf("MOUVEMENT détecté !\n\r");
-                            isImmobile = false;
-                        }
-                    } else {
-                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
-                            isImmobile = true;
-                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
-                        }
-                    }
+                	                    if (motionDetected) {
+                	                        lastMotionTime = HAL_GetTick();
+                	                        if (isImmobile) {
+                	                            printf("MOUVEMENT détecté !\n\r");
+                	                            isImmobile = false;
+                	                        }
+                	                    } else {
+                	                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
+                	                            isImmobile = true;
+                	                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
+                	                        }
+                	                    }
                 } else {
                     firstRead = false;
                     lastMotionTime = HAL_GetTick();
@@ -519,7 +530,7 @@ void test_IMU_and_RFID_communication(void) {
             }
         }
 
-        HAL_Delay(250);
+        HAL_Delay(50);
     }
 }
 
@@ -613,6 +624,104 @@ void test_CAN_BUS_send_receive(void) {
     }
 }
 
+
+void testIMU_CAN(void) {
+    printf("%cBNO08x test CAN (immobile)\n\r", 0x0C);
+
+    // Initialisation SPI pour l'IMU
+    config_SPI_before_IMU();
+
+    // Initialisation IMU
+    if (!bno08x.begin_SPI()) {
+        printf("Test IMU : Failed to find BNO08x chip !\n\r");
+        while (1) HAL_Delay(10);
+    }
+    printf("BNO08x Found !\n\r");
+
+    for (int n = 0; n < bno08x.prodIds.numEntries; n++) {
+        printf("Part %lu : Version : %d.%d.%d, Build %lu\n\r",
+               bno08x.prodIds.entry[n].swPartNumber,
+               bno08x.prodIds.entry[n].swVersionMajor,
+               bno08x.prodIds.entry[n].swVersionMinor,
+               bno08x.prodIds.entry[n].swVersionPatch,
+               bno08x.prodIds.entry[n].swBuildNumber);
+    }
+
+    // Activer le report du Game Rotation Vector
+    printf("Setting desired reports \n\r");
+    if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR)) {
+        printf("Could not enable game vector\n\r");
+    }
+
+    HAL_Delay(1000);  // Attendre que le capteur soit prêt
+
+    // Initialisation du CAN
+    can_bus.begin();
+
+    // Préparer le tableau CAN avec les 2 premiers octets = arbitration_id
+    uint8_t canData[8] = {0};
+    uint16_t arbitration_id = 1710; // 0x06AE
+    canData[0] = (arbitration_id >> 8) & 0xFF;
+    canData[1] = arbitration_id & 0xFF;
+
+    // Variables de détection de mouvement
+    sh2_Quaternion lastQuat = {0};
+    bool firstRead = true;
+    uint32_t lastMotionTime = HAL_GetTick();
+    bool isImmobile = false;
+
+    while (1) {
+        if (bno08x.getSensorEvent(&sensorValue)) {
+            if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
+                sh2_Quaternion q;
+                q.x = sensorValue.un.gameRotationVector.i;
+                q.y = sensorValue.un.gameRotationVector.j;
+                q.z = sensorValue.un.gameRotationVector.k;
+                q.w = sensorValue.un.gameRotationVector.real;
+
+                if (!firstRead) {
+                    bool motionDetected = quaternionHasMotion(q, lastQuat, MOTION_THRESHOLD);
+
+                    // --- Mouvement détecté ---
+                    if (motionDetected) {
+                        lastMotionTime = HAL_GetTick();
+                        if (isImmobile) {
+                            isImmobile = false;
+                            printf("MOUVEMENT détecté !\n\r");
+
+                            // ENVOI CAN
+                            canData[2] = 0x00; // 0 = mouvement
+                            for (int i = 3; i < 8; i++) canData[i] = 0;
+                            can_bus.send(canData, 8);
+                        }
+                    }
+                    // --- Pas de mouvement depuis IMMOBILE_TIME_MS ---
+                    else {
+                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMMOBILE_TIME_MS)) {
+                            isImmobile = true;
+                            printf("IMMOBILE depuis %u ms\n\r", IMMOBILE_TIME_MS);
+
+                            // ENVOI CAN
+                            canData[2] = 0x01; // 1 = immobile
+                            for (int i = 3; i < 8; i++) canData[i] = 0;
+                            can_bus.send(canData, 8);
+                        }
+                    }
+                } else {
+                    firstRead = false;
+                    lastMotionTime = HAL_GetTick();
+                }
+
+                lastQuat = q;
+            }
+        }
+
+        HAL_Delay(50);
+    }
+}
+
+
+
 /**
  *
  */
@@ -624,9 +733,10 @@ void tests_unitaires(void) {
 //testDriver_scan_button ();
 //testDriver_button_and_leds ();
 //test_CAN_BUS_send_only();
-    test_CAN_BUS_send_receive ();
+    //test_CAN_BUS_send_receive ();
 
     //testIMU_connection();
+	testIMU_CAN();
 
 //test_RFID_connection();
 //test_IMU_and_RFID_communication();
