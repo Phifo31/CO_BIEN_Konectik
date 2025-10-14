@@ -93,6 +93,20 @@ void testDriver_debug_led_state(void) {
     while (1) {
         printf("Test : %d \n\r", i++);
 
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+        HAL_Delay(50);
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+        HAL_Delay(450);
+    }
+}
+
+
+void testDriver_led_state(void) {
+    int16_t i = 0;
+
+    while (1) {
+        printf("Test : %d \n\r", i++);
+
         TOUCH_BUTTON_debug_led_set_state(0x38, ON);
         HAL_Delay(250);
         TOUCH_BUTTON_debug_led_set_state(0x38, OFF);
@@ -115,6 +129,7 @@ void testDriver_debug_led_state(void) {
         HAL_Delay(10000);
     }
 }
+
 
 void testDriver_RGB_LEDS(void) {
     bool status = false;
@@ -544,7 +559,7 @@ uint32_t txMailBox;
 
 #include "can_bus.h"
 
-CAN_BUS can_bus(0x431);
+extern CAN_BUS can_bus;
 
 void test_CAN_BUS_send_only(void) {
     can_bus.begin();
@@ -613,18 +628,20 @@ void test_CAN_BUS_send_receive(void) {
     }
 }
 
+
+
 /**
  *
  */
 void tests_unitaires(void) {
 //testHardware_i2cSlave (); // Clignotement de user led par ecriture lecture de base
 //testDriver_i2cSlave (); // Clignotement de user led par selection de mode
-//testDriver_debug_led_state(); // Clignotement de la led de debug
+testDriver_debug_led_state(); // Clignotement de la led de debug
 //testDriver_RGB_LEDS();	// Modification de l'intensité et des couleurs des leds RGB
 //testDriver_scan_button ();
 //testDriver_button_and_leds ();
 //test_CAN_BUS_send_only();
-    test_CAN_BUS_send_receive ();
+//    test_CAN_BUS_send_receive ();
 
     //testIMU_connection();
 
