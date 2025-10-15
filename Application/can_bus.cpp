@@ -88,7 +88,7 @@ HAL_StatusTypeDef CAN_BUS::send(uint8_t *txData, uint8_t len) {
     txHeader_.DataLength = len;
 
     if ((status = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_, txData)) != HAL_OK) {
-        Error_Handler();
+
     }
   return status;
 }

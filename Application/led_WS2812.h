@@ -12,11 +12,67 @@
 extern "C" {
 #endif
 
+
+#define MAX_LED 8
+#define USE_BRIGHTNESS 1
+
+#define WS2812_PWM_DATA_ONE 60 // 2/3 of 90
+#define WS2812_PWM_DATA_ZERO 30  // 1/3 of 90
+
+#define PI 3.14159265
+
+
 class LED_WS2812 {
+
+public:
+
+    LED_WS2812  ();
+
+    /**
+     *
+     */
+    void set_color(uint8_t led_num, uint8_t red, uint8_t green, uint8_t blue);
+
+    /**
+     *
+     */
+    void set_brightness(uint8_t brightness);
+
+    /**
+     *
+     */
+    void send(void);
+
+    /**
+     *
+     */
+    void reset_flag(void);
+
+
+private:
+    uint8_t LED_data_[MAX_LED][4];
+
+    #if USE_BRIGHTNESS
+    uint8_t LED_mod_[MAX_LED][4];  // for brightness
+    #endif
+
+
+    bool datasentflag_;
+
+#if USE_BRIGHTNESS
+        uint8_t LED_mod[MAX_LED][4];  // for brightness
+#endif
+
+
+
+void notification_leds_set_color (LEDS_color_t color);
+void notification_leds_set_mode (LEDS_mode_t mode);
+void notification_leds_set_brightness (uint8_t brightness);
+
+
 
 
 };
-
 
 #ifdef __cplusplus
 } // extern "C"

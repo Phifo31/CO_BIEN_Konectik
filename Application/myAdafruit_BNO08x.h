@@ -76,12 +76,22 @@ public:
 
   sh2_ProductIds_t prodIds; ///< The product IDs returned by the sensor
 
+  void setup (void);
+
 protected:
   virtual bool _init(int32_t sensor_id);
 
   sh2_Hal_t
       _HAL; ///< The struct representing the SH2 Hardware Abstraction Layer
 };
+
+
+typedef enum {
+    NO_CHANGE, MOVEMENT_DETECTED, IMMOBILE_DETECTED
+} imu_state_t;
+
+float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2);
+imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values);
 
 
 #endif /* MYADAFRUIT_BNO08X_H_ */

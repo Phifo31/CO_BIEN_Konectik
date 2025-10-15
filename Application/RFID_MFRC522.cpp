@@ -460,8 +460,8 @@ static void halt(void) {
  */
 RFID_MFRC522_Status_t RFID_MFRC522_check(uint8_t *id, uint8_t *type) {
     RFID_MFRC522_Status_t status;
-    //Find cards, return card type
 
+    //Find cards, return card type
     // REQuest command, Type A. Invites PICCs in state IDLE to go to READY and prepare for anticollision or selection. 7 bit frame.
     status = request(PICC_REQIDL, id);
 
@@ -518,31 +518,32 @@ RFID_MFRC522_Status_t RFID_MFRC522_Compare(uint8_t *CardID, uint8_t *CompareID) 
 void RFID_MFRC522_dumpVersionToSerial(void) {
     // Get the MFRC522 firmware version
     uint8_t v = readRegister(MFRC522_REG_VERSION);
-    printf("Firmware Version: 0x%02X", v);
+    printf("MRFC522 : Firmware Version: 0x%02X", v);
     // Lookup which version
     switch (v) {
     case 0x88:
-        printf(" = (clone) \n\r");
+        printf(" => (clone) \n\r");
         break;
     case 0x90:
-        printf(" = v0.0 \n\r");
+        printf(" => v0.0 \n\r");
         break;
     case 0x91:
-        printf(" = v1.0 \n\r");
+        printf(" => v1.0 \n\r");
         break;
     case 0x92:
-        printf(" = v2.0 \n\r");
+        printf(" => v2.0 \n\r");
         break;
     case 0x12:
-        printf(" = counterfeit chip \n\r");
+        printf(" => counterfeit chip \n\r");
         break;
     default:
-        printf(" = (unknown)\n\r");
+        printf(" => (unknown)\n\r");
     }
     // When 0x00 or 0xFF is returned, communication probably failed
     if ((v == 0x00) || (v == 0xFF))
         printf("WARNING: Communication failure, is the MFRC522 properly connected ? \n\r");
 } // End DumpVersionToSerial()
+
 
 
 // ...

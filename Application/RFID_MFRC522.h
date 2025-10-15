@@ -233,6 +233,7 @@ RFID_MFRC522_Status_t RFID_MFRC522_Compare(uint8_t* CardID, uint8_t* CompareID);
 
 void RFID_MFRC522_dumpVersionToSerial(void);
 
+
 //#define SPI_IS_BUSY(SPIx) (((SPIx)->SR & (SPI_SR_TXE | SPI_SR_RXNE)) == 0 || ((SPIx)->SR & SPI_SR_BSY))
 //#define SPI_WAIT(SPIx)            while (SPI_IS_BUSY(SPIx))
 

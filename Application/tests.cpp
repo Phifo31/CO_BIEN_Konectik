@@ -192,51 +192,47 @@ void testDriver_scan_button(void) {
     }
 }
 
-#define BOUTON_NUM_1	0x38
-#define BOUTON_NUM_2	0x48
+
 
 void testDriver_button_and_leds(void) {
 
     int16_t i = 0;
 
-    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_1, ON);
-    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_1, ON);
-    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_1, 100);
-    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_BLUE);
+    TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
 
-    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_2, ON);
-    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_2, ON);
-    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_2, 100);
-    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_BLUE);
+    TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
 
     while (1) {
         printf("Test : %d \n\r", i++);
 
-        if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_1) == true) {
-            TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_1, ON);
-            TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_RED);
+        if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
+            TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_RED);
             printf("Push button n°1 state : On \n\r");
         } else {
-            TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_1, OFF);
-            TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_BLUE);
+            TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, OFF);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
             printf("Push button n°1 state : Off \n\r");
         }
 
-        if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_2) == true) {
-            TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_2, ON);
-            TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_RED);
+        if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
+            TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, ON);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_RED);
             printf("Push button n°2 state : On \n\r");
         } else {
-            TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_2, OFF);
-            TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_BLUE);
+            TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, OFF);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
             printf("Push button n°2 state : Off \n\r");
         }
         HAL_Delay(250);
     }
 }
-
-#define BOUTON_NUM_1    0x38
-#define BOUTON_NUM_2    0x48
 
 void TestIntegration_button_and_leds(void) {
     uint16_t seconds, reste = 0;
@@ -244,15 +240,15 @@ void TestIntegration_button_and_leds(void) {
     bool state_button2 = false;
     uint8_t color_state = 0;
 
-    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_1, ON);
-    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_1, ON);
-    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_1, 100);
-    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_PINK);
+    TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_PINK);
 
-    TOUCH_BUTTON_debug_led_set_state(BOUTON_NUM_2, ON);
-    TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_2, ON);
-    TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_2, 100);
-    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_PINK);
+    TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, ON);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_PINK);
 
     printf("\nTest boutons tactiles et leds - version 1.0 : 23/09/2025\n");
 
@@ -262,35 +258,35 @@ void TestIntegration_button_and_leds(void) {
             seconds = msec2sec(HAL_GetTick(), &reste);
             printf("%05u:%03u - Caractère reçu : %c\n", seconds, reste, receive_char);
             if (receive_char == 'c') {
-                TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_1, ON);
-                TOUCH_BUTTON_RGB_leds_set_mode(BOUTON_NUM_2, ON);
-                TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_1, 100);
-                TOUCH_BUTTON_RGB_leds_set_intensity(BOUTON_NUM_2, 100);
+                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, ON);
+                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, ON);
+                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 100);
+                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
                 switch (color_state) {
                 case 0:
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_PINK);
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_PINK);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_PINK);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_PINK);
                     color_state++;
                     break;
                 case 1:
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_RED);
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_RED);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_RED);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_RED);
                     color_state++;
                     break;
                 case 2:
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_BLUE);
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_BLUE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
                     color_state++;
                     break;
                 case 3:
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_GREEN);
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_GREEN);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_GREEN);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_GREEN);
                     color_state++;
                     break;
                 case 4:
                 default:
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_1, COLOR_WHITE);
-                    TOUCH_BUTTON_RGB_leds_set_color(BOUTON_NUM_2, COLOR_WHITE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_WHITE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_WHITE);
                     color_state = 0;
                     break;
                 }
@@ -298,24 +294,24 @@ void TestIntegration_button_and_leds(void) {
         }
 
         if (state_button1 == false) {
-            if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_1) == true) {
+            if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
                 state_button1 = true;
                 seconds = msec2sec(HAL_GetTick(), &reste);
                 printf("%05u:%03u - button 1 = true\n", seconds, reste);
             }
-        } else if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_1) == false) {
+        } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == false) {
             state_button1 = false;
             seconds = msec2sec(HAL_GetTick(), &reste);
             printf("%05u:%03u - button 1 = false\n", seconds, reste);
         }
 
         if (state_button2 == false) {
-            if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_2) == true) {
+            if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
                 state_button2 = true;
                 seconds = msec2sec(HAL_GetTick(), &reste);
                 printf("%05u:%03u - button 2 = true\n", seconds, reste);
             }
-        } else if (TOUCH_BUTTON_get_button_state(BOUTON_NUM_2) == false) {
+        } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == false) {
             state_button2 = false;
             seconds = msec2sec(HAL_GetTick(), &reste);
             printf("%05u:%03u - button 2 = false\n", seconds, reste);
@@ -334,24 +330,12 @@ void TestIntegration_button_and_leds(void) {
 #include <stdbool.h>
 #include <stdint.h>
 
-static GPIO_Pin imu_reset(IMU_RST_GPIO_Port, IMU_RST_Pin);
-static GPIO_Pin imu_cs(IMU_CS_GPIO_Port, IMU_CS_Pin);
-static GPIO_Pin imu_irq(IMU_IRQ_GPIO_Port, IMU_IRQ_Pin);
-
-Adafruit_BNO08x bno08x(&hspi1, imu_reset, imu_cs, imu_irq);
+extern Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
 
 #define MOTION_THRESHOLD  0.01f   // Variation threshold(à ajuster)
 #define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
-//Function to calculate the diff between 2 quaternions
-float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
-    double dr = q1.x - q2.x;
-    double di = q1.y - q2.y;
-    double dj = q1.z - q2.z;
-    double dk = q1.w - q2.w;
-    return ((float) sqrt(dr * dr + di * di + dj * dj + dk * dk));
-}
 
 void testIMU_connection(void) {
 //	int16_t i = 0;
@@ -576,38 +560,7 @@ void test_CAN_BUS_send_only(void) {
     }
 }
 
-uint16_t can_bus_callback_led(uint16_t sender, uint8_t len, uint8_t data[5]) {
-    if (data[0] == 0)
-        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-    else
-        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 
-    return 0;
-}
-
-uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t len, uint8_t data[5]) {
-    switch (len) {
-    case 1:
-        printf("%04X [%d] %02X \r\n", sender, len, data[0]);
-        break;
-    case 2:
-        printf("%04X [%d] %02X %02X \r\n", sender, len, data[0], data[1]);
-        break;
-    case 3:
-        printf("%04X [%d] %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2]);
-        break;
-    case 4:
-        printf("%04X [%d] %02X %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2], data[3]);
-        break;
-    case 5:
-        printf("%04X [%d] %02X %02X %02X %02X %02X \r\n", sender, len, data[0], data[1], data[2], data[3], data[4]);
-        break;
-    default:
-        printf("Erreur \r\n");
-        break;
-    }
-    return 0;
-}
 
 void test_CAN_BUS_send_receive(void) {
     can_bus.begin();
@@ -636,20 +589,20 @@ void test_CAN_BUS_send_receive(void) {
 void tests_unitaires(void) {
 //testHardware_i2cSlave (); // Clignotement de user led par ecriture lecture de base
 //testDriver_i2cSlave (); // Clignotement de user led par selection de mode
-testDriver_debug_led_state(); // Clignotement de la led de debug
+//testDriver_debug_led_state(); // Clignotement de la led de debug
 //testDriver_RGB_LEDS();	// Modification de l'intensité et des couleurs des leds RGB
 //testDriver_scan_button ();
 //testDriver_button_and_leds ();
 //test_CAN_BUS_send_only();
-//    test_CAN_BUS_send_receive ();
+//test_CAN_BUS_send_receive ();
 
-    //testIMU_connection();
+  testIMU_connection();
 
 //test_RFID_connection();
 //test_IMU_and_RFID_communication();
 
 //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
-//    TestIntegration_button_and_leds();
+//TestIntegration_button_and_leds();
 
 }
 

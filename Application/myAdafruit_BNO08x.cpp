@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h> // for memset function
+#include <math.h>
 
 #include "main.h"
 #include "application.h"
@@ -33,6 +34,16 @@ static void debug_println(char *str) {
 #ifdef PRINT_DEBUG
 	printf("BNO08x : %s \n\r", str);
 #endif
+}
+
+
+//Function to calculate the diff between 2 quaternions
+float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2) {
+    double dr = q1.x - q2.x;
+    double di = q1.y - q2.y;
+    double dj = q1.z - q2.z;
+    double dk = q1.w - q2.w;
+    return ((float) sqrt(dr * dr + di * di + dj * dj + dk * dk));
 }
 
 
@@ -296,3 +307,78 @@ bool Adafruit_BNO08x::enableReport(sh2_SensorId_t sensorId, uint32_t interval_us
 
   return true;
 }
+
+void Adafruit_BNO08x::setup (void) {
+
+    // Try to initialize!
+    if (!begin_SPI()) {
+        printf("BNO085 : Failed to find BNO08x chip ! \n\r");
+        Error_Handler();
+        }
+
+    printf("BNO08x : Found ! \n\r");
+
+    for (int n = 0; n < prodIds.numEntries; n++) {
+        printf("Part %lu ", prodIds.entry[n].swPartNumber);
+        printf(": Version : %d.%d.%d \n\r", prodIds.entry[n].swVersionMajor,
+                prodIds.entry[n].swVersionMinor, prodIds.entry[n].swVersionPatch);
+        printf(" Build %lu \n\r", prodIds.entry[n].swBuildNumber);
+    }
+
+    // Here is where you define the sensor outputs you want to receive
+    printf("Setting desired reports \n\r");
+    if (!enableReport(SH2_GAME_ROTATION_VECTOR)) {
+        printf("Could not enable game vector\n\r");
+    }
+}
+
+/**
+ *
+ */
+imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values) {
+    static bool firstRead = true;
+    static uint32_t lastMotionTime;
+    static bool isImmobile = false;
+    static sh2_Quaternion lastQuat = { 0 };
+
+    imu_state_t state = NO_CHANGE;
+    sh2_Quaternion q;
+
+    if (values->sensorId == SH2_GAME_ROTATION_VECTOR) {
+        q.x = values->un.gameRotationVector.i;
+        q.y = values->un.gameRotationVector.j;
+        q.z = values->un.gameRotationVector.k;
+        q.w = values->un.gameRotationVector.real;
+
+        if (firstRead) {
+            firstRead = false;
+            lastMotionTime = HAL_GetTick();
+        } else {
+            float diff = quaternionDiff(q, lastQuat);
+
+            if (diff > IMU_MOTION_THRESHOLD) {
+                lastMotionTime = HAL_GetTick();
+                if (isImmobile) {
+                    printf("MOUVEMENT détecté !\n\r");
+                    isImmobile = false;
+                    state = MOVEMENT_DETECTED;
+                }
+            } else {
+                if (!isImmobile && ((HAL_GetTick() - lastMotionTime) >= IMU_IMMOBILE_TIME_MS)) {
+                    isImmobile = true;
+                    printf("IMMOBILE depuis %u ms\n\r", IMU_IMMOBILE_TIME_MS);
+                    state = IMMOBILE_DETECTED;
+                }
+            }
+        }
+        lastQuat.x = q.x;
+        lastQuat.y = q.y;
+        lastQuat.z = q.z;
+        lastQuat.w = q.w;
+    }
+    return state;
+}
+
+
+// End of file
+
