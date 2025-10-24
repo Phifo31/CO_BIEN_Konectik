@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#define PRINT_DEBUG 1
+
 #define PERIODE_LECTURE_RFID 100
 #define PERIODE_LECTURE_IMU 250
 #define PERIODE_LECTURE_TOUCH_BUTTONS 150
@@ -30,7 +32,7 @@ extern "C" {
 #define CAN_BUS_TOUCH_BUTTON_1_ID 0x2222
 #define CAN_BUS_TOUCH_BUTTON_2_ID 0x2223
 
-#define CAN_BUS_LED_DEBUG_ID 0x3210
+#define CAN_BUS_LED_DEBUG_ID 1310
 #define CAN_BUS_UART_DEBUG_ID 0x7777
 #define CAN_BUS_VIBRATING_MOTOR_ID 0x6789
 #define CAN_BUS_NOTIFICATION_LEDS_ID 0xABCD
@@ -38,6 +40,9 @@ extern "C" {
 
 #define TOUCH_BUTTON_ADDRESS_1    0x38
 #define TOUCH_BUTTON_ADDRESS_2    0x48
+
+#define MAX_LED 10
+#define USE_BRIGHTNESS 1
 
 
 extern I2C_HandleTypeDef hi2c1;

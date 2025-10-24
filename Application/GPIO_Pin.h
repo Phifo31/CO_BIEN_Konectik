@@ -12,11 +12,20 @@
 
 class GPIO_Pin {
 public:
+
+    GPIO_Pin () : port_(NULL), pin_(-1) {} //Constructeur par défaut
 	GPIO_Pin (GPIO_TypeDef * port, uint16_t pin);
 	virtual ~GPIO_Pin();
 
 	void set (void);
 	void reset (void);
+
+	GPIO_PinState read (void);
+
+	//GPIO_TypeDef * port (void);
+	uint16_t pin(void);
+
+private :
 
 	GPIO_TypeDef * port_;
 	uint16_t pin_;

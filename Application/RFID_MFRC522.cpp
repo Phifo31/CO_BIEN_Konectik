@@ -48,16 +48,15 @@ static void writeRegister(uint8_t addr, uint8_t val) {
     buffer[0] = (addr << 1) & 0x7E;
     buffer[1] = val;
 
-
     //Send data
-    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_RESET); // CS low
+    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_RESET); // CS low
     transmitStatus = HAL_SPI_Transmit(&hspi1, buffer, 2, HAL_MAX_DELAY);
     if (transmitStatus != HAL_SPI_ERROR_NONE) {
-        HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_SET); // CS high
+        HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_SET); // CS high
         handleError();
     }
 
-    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_SET); // CS high
+    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_SET); // CS high
 }
 
 /**
@@ -68,7 +67,7 @@ static uint8_t readRegister(uint8_t addr) {
     uint8_t bufferTx[5];
     uint8_t bufferRx[5];
 
-    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_RESET); // CS low
+    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_RESET); // CS low
 
     bufferTx[0] = (addr << 1) | 0x80;
     bufferTx[1] = 0x00;
@@ -78,7 +77,7 @@ static uint8_t readRegister(uint8_t addr) {
         handleError();
     }
 
-    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_SET); // CS high
+    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_SET); // CS high
 
     return bufferRx[1];
 }
@@ -128,13 +127,12 @@ static void antennaOff(void) {
     clearBitMask(MFRC522_REG_TX_CONTROL, 0x03);
 }
 
-
 /**
  *
  */
 void RFID_MFRC522_init(void) {
 
-    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin,GPIO_PIN_SET);
+    HAL_GPIO_WritePin(RFID_SS_GPIO_Port, RFID_SS_Pin, GPIO_PIN_SET);
 
     // Hard reset
     HAL_GPIO_WritePin(RFID_RST_GPIO_Port, RFID_RST_Pin, GPIO_PIN_RESET);
@@ -429,7 +427,7 @@ static RFID_MFRC522_Status_t selectTag(uint8_t *serNum, uint8_t *type) {
         size = buffer[0];
     } else {
         size = 0;
-        UNUSED (size);
+        UNUSED(size);
     }
 
     if (recvBits != 24) { // SAK must be exactly 24 bits (1 byte + CRC_A).
@@ -466,10 +464,10 @@ RFID_MFRC522_Status_t RFID_MFRC522_check(uint8_t *id, uint8_t *type) {
     status = request(PICC_REQIDL, id);
 
     if (status == MI_OK) {
-        //Card detected
-        //Anti-collision, return card serial number 4 bytes
+        // Card detected
+        // Anti-collision, return card serial number 4 bytes
         status = anticoll(id);
-        //select, return sak and crc
+        // select, return sak and crc
         status = selectTag(id, type);
     }
 
@@ -477,8 +475,6 @@ RFID_MFRC522_Status_t RFID_MFRC522_check(uint8_t *id, uint8_t *type) {
 
     return status;
 }
-
-
 
 RFID_MFRC522_Status_t RFID_MFRC522_Compare(uint8_t *CardID, uint8_t *CompareID) {
     uint8_t i;
@@ -489,8 +485,6 @@ RFID_MFRC522_Status_t RFID_MFRC522_Compare(uint8_t *CardID, uint8_t *CompareID) 
     }
     return MI_OK;
 }
-
-
 
 //void bin_to_strhex(unsigned char *bin, unsigned int binsz, char **result) {
 //    char hex_str[] = "0123456789abcdef";
@@ -544,8 +538,5 @@ void RFID_MFRC522_dumpVersionToSerial(void) {
         printf("WARNING: Communication failure, is the MFRC522 properly connected ? \n\r");
 } // End DumpVersionToSerial()
 
-
-
-// ...
-
+// End of file
 

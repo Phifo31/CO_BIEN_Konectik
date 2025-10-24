@@ -114,26 +114,7 @@ void LED_WS2812::reset_flag(void) {
     datasentflag_ = true;
 }
 
-LED_WS2812 notification_leds;
 
-/**
- * @todo Si il y a plusieurs chaiens de leds : attention cette fonction ne fonctionne pas
- */
-void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
-    HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
-
-    notification_leds.reset_flag();
-}
-
-/**
- *
- */
-void notification_leds_set_color (LEDS_color_t color) {
-    for (int i = 0; i < MAX_LED; i++) {
-        notification_leds.set_color (i, color.red, color.green, color.blue);
-
-    }
-}
 
 /**
  *
@@ -144,41 +125,8 @@ void notification_leds_set_mode (LEDS_mode_t mode) {
 }
 */
 
-/**
- *
- */
-void notification_leds_set_brightness (uint8_t brightness) {
-
-    notification_leds.set_brightness(brightness);
-}
 
 
 
-void test_unitaires_notification_leds(void) {
-
-    notification_leds.set_color(0, 255, 0, 0);
-    notification_leds.set_color(1, 0, 255, 0);
-    notification_leds.set_color(2, 0, 0, 255);
-    notification_leds.set_color(3, 46, 89, 128);
-    notification_leds.set_color(4, 156, 233, 100);
-    notification_leds.set_color(5, 102, 0, 235);
-    notification_leds.set_color(6, 47, 38, 77);
-    notification_leds.set_color(7, 255, 200, 0);
-
-    while (1) {
-
-        for (int i = 0; i < 46; i++) {
-            notification_leds.set_brightness(i);
-            notification_leds.send();
-            HAL_Delay(50);
-        }
-
-        for (int i = 45; i >= 0; i--) {
-            notification_leds.set_brightness(i);
-            notification_leds.send();
-            HAL_Delay(50);
-        }
-    }
-}
-
+// end of file
 
