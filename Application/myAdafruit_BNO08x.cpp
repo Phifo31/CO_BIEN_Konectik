@@ -424,14 +424,14 @@ imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values) {
             if (motionDetected) {
                 lastMotionTime = HAL_GetTick();
                 if (isImmobile) {
-                    printf("MOUVEMENT détecté !\n\r");
+                    printf("Mouvement détecté !\n\r");
                     isImmobile = false;
                     state = MOVEMENT_DETECTED;
                 }
             } else {
                 if (!isImmobile && ((HAL_GetTick() - lastMotionTime) > IMU_IMMOBILE_TIME_MS)) {
                     isImmobile = true;
-                    printf("IMMOBILE depuis %u ms\n\r", IMU_IMMOBILE_TIME_MS);
+                    printf("Immobile depuis %u ms\n\r", IMU_IMMOBILE_TIME_MS);
                     state = IMMOBILE_DETECTED;
                 }
             }

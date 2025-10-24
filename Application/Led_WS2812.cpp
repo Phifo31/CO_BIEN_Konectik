@@ -27,10 +27,10 @@ static uint16_t pwm_data[(24 * MAX_LED) + 50];
 /**
  *
  */
-LED_WS2812::LED_WS2812() {
-
+LED_WS2812::LED_WS2812 (uint32_t channel, uint16_t nb_leds) {
     datasentflag_ = true;
-
+    timer_channel_ = channel;
+    nb_leds_ = nb_leds;
 }
 
 /**
@@ -94,7 +94,6 @@ void LED_WS2812::send(void) {
 
             else
                 pwm_data[indx] = WS2812_PWM_DATA_ZERO;
-
             indx++;
         }
     }
@@ -110,11 +109,16 @@ void LED_WS2812::send(void) {
     datasentflag_ = false;
 }
 
+/**
+ *
+ */
 void LED_WS2812::reset_flag(void) {
     datasentflag_ = true;
 }
 
-
+uint16_t LED_WS2812::nb_leds (void){
+    return nb_leds_;
+}
 
 /**
  *

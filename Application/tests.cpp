@@ -12,6 +12,7 @@
 
 #include "main.h"
 #include "../../Common/common_data.h"
+#include "../../Common/can_ids.h"
 
 #include "application.h"
 #include "touch_button.h"
@@ -27,7 +28,7 @@ extern Adafruit_BNO08x bno08x;
 //#define MOTION_THRESHOLD  0.01f   // Variation threshold(à ajuster)
 //#define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
-extern LED_WS2812 notification_leds_J5;
+extern LED_WS2812 leds_strip_J5;
 extern CAN_BUS can_bus;
 
 //                         Red, Green, Blue
@@ -363,45 +364,45 @@ void testIntegration_two_touch_buttons_and_RGB_leds(void) {
     printf("\n\nTest boutons tactiles et leds - version 1.0 : 23/09/2025\r\n");
 
     while (1) {
-//        if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
-//            uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
-//            seconds = msec2sec(HAL_GetTick(), &reste);
-//            printf("%05u:%03u - Caractère reçu : %c\r\n", seconds, reste, receive_char);
-//            if (receive_char == 'c') {
-//                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, ON);
-//                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, ON);
-//                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 100);
-//                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
-//                switch (color_state) {
-//                case 0:
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_PINK);
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_PINK);
-//                    color_state++;
-//                    break;
-//                case 1:
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_RED);
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_RED);
-//                    color_state++;
-//                    break;
-//                case 2:
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
-//                    color_state++;
-//                    break;
-//                case 3:
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_GREEN);
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_GREEN);
-//                    color_state++;
-//                    break;
-//                case 4:
-//                default:
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_WHITE);
-//                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_WHITE);
-//                    color_state = 0;
-//                    break;
-//                }
-//            }
-//        }
+        if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
+            uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
+            seconds = msec2sec(HAL_GetTick(), &reste);
+            printf("%05u:%03u - Caractère reçu : %c\r\n", seconds, reste, receive_char);
+            if (receive_char == 'c') {
+                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, ON);
+                TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, ON);
+                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 100);
+                TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
+                switch (color_state) {
+                case 0:
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_PINK);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_PINK);
+                    color_state++;
+                    break;
+                case 1:
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_RED);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_RED);
+                    color_state++;
+                    break;
+                case 2:
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
+                    color_state++;
+                    break;
+                case 3:
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_GREEN);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_GREEN);
+                    color_state++;
+                    break;
+                case 4:
+                default:
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_WHITE);
+                    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_WHITE);
+                    color_state = 0;
+                    break;
+                }
+            }
+        }
 
         if (state_button1 == false) {
             if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
@@ -436,30 +437,30 @@ void testIntegration_two_touch_buttons_and_RGB_leds(void) {
  */
 void test_unitaires_notification_leds(void) {
 
-    notification_leds_J5.set_color(0, 255, 0, 0);
-    notification_leds_J5.set_color(1, 0, 255, 0);
-    notification_leds_J5.set_color(2, 0, 0, 255);
-    notification_leds_J5.set_color(3, 46, 89, 128);
-    notification_leds_J5.set_color(4, 156, 233, 100);
-    notification_leds_J5.set_color(5, 102, 0, 235);
-    notification_leds_J5.set_color(6, 47, 38, 77);
-    notification_leds_J5.set_color(7, 255, 200, 0);
-    notification_leds_J5.set_color(8, 0, 255, 0);
-    notification_leds_J5.set_color(9, 255, 0, 0);
+    leds_strip_J5.set_color(0, 255, 0, 0);
+    leds_strip_J5.set_color(1, 0, 255, 0);
+    leds_strip_J5.set_color(2, 0, 0, 255);
+    leds_strip_J5.set_color(3, 46, 89, 128);
+    leds_strip_J5.set_color(4, 156, 233, 100);
+    leds_strip_J5.set_color(5, 102, 0, 235);
+    leds_strip_J5.set_color(6, 47, 38, 77);
+    leds_strip_J5.set_color(7, 255, 200, 0);
+    leds_strip_J5.set_color(8, 0, 255, 0);
+    leds_strip_J5.set_color(9, 255, 0, 0);
 
     HAL_TIM_Base_Start(&htim1);
 
     while (1) {
 
         for (int i = 0; i < 46; i++) {
-            notification_leds_J5.set_brightness(i);
-            notification_leds_J5.send();
+            leds_strip_J5.set_brightness(i);
+            leds_strip_J5.send();
             HAL_Delay(50);
         }
 
         for (int i = 45; i >= 0; i--) {
-            notification_leds_J5.set_brightness(i);
-            notification_leds_J5.send();
+            leds_strip_J5.set_brightness(i);
+            leds_strip_J5.send();
             HAL_Delay(50);
         }
     }
@@ -704,8 +705,8 @@ void test_CAN_BUS_send_receive(void) {
     toSend[0] = 0x12;
     toSend[1] = 0x34;
 
-    can_bus.register_callback_function(0x1234, can_bus_callback_led);
-    can_bus.register_callback_function(0x5678, can_bus_callback_uart_tx);
+    can_bus.register_callback_function((arbitrationId_t)0x1234, can_bus_callback_led);
+    can_bus.register_callback_function((arbitrationId_t)0x5678, can_bus_callback_uart_tx);
 
     uint8_t count = 0;
     while (1) {
@@ -738,8 +739,8 @@ void tests_unitaires(void) {
 //test_CAN_BUS_send_receive ();
 
 //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
-//testIntegration_one_touch_button_and_RGB_leds();
-testIntegration_two_touch_buttons_and_RGB_leds();
+testIntegration_one_touch_button_and_RGB_leds();
+//testIntegration_two_touch_buttons_and_RGB_leds();
 
 }
 

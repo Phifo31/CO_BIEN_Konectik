@@ -9,6 +9,7 @@
 
 #include "main.h"
 #include "../../Common/common_data.h"
+#include "../../Common/can_ids.h"
 
 #include "GPIO_Pin.h"
 #include "can_bus.h"
@@ -35,7 +36,9 @@ CAN_BUS can_bus(0x431);
 volatile bool auto_led_debug = true;
 volatile uint32_t time_for_stop_vibrating_motor = UINT32_MAX;
 
-LED_WS2812 notification_leds_J5;
+LED_WS2812 leds_strip_J5 (TIM_CHANNEL_1, LEDS_STRIPS_J5_NB_LEDS);
+LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS);
+LED_WS2812 leds_strip_J7 (TIM_CHANNEL_3, LEDS_STRIPS_J7_NB_LEDS);
 
 typedef union RGBLED_TOUCH_BUTTON_DATA {
     uint8_t CANBUSdataArray[6];
@@ -43,17 +46,26 @@ typedef union RGBLED_TOUCH_BUTTON_DATA {
     struct {
         LEDS_mode_t rgbLedsMode;
         LEDS_color_t rgbLedsColor;
-        uint8_t rgbLedIntensity;
+        uint8_t rgbLedBrightness;
     } clientDataStruct;
 } rgbled_data_t;
 
+
 volatile rgbled_data_t rgbled_button_1_tmp_data;
 volatile rgbled_data_t rgbled_button_2_tmp_data;
+volatile rgbled_data_t rgbled_button_3_tmp_data;
+
 volatile bool rgbled_touch_button_1_change_flag = false;
 volatile bool rgbled_touch_button_2_change_flag = false;
+volatile bool rgbled_touch_button_3_change_flag = false;
 
-volatile rgbled_data_t notification_leds_J5_tmp_data;
-volatile bool notification_leds_J5_change_flag = false;
+volatile rgbled_data_t leds_strip_J5_tmp_data;
+volatile rgbled_data_t leds_strip_J6_tmp_data;
+volatile rgbled_data_t leds_strip_J7_tmp_data;
+
+volatile bool leds_strip_J5_change_flag = false;
+volatile bool leds_strip_J6_change_flag = false;
+volatile bool leds_strip_J7_change_flag = false;
 
 /**
  * Gestion de la led de vie (tant qu'elle n'est pas utilisé par le BUS CAN
@@ -87,7 +99,7 @@ uint32_t change_state_user_led(void) {
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
     HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
 
-    notification_leds_J5.reset_flag();
+    leds_strip_J5.reset_flag();
 }
 
 /**
@@ -95,7 +107,7 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
  */
 void notification_leds_set_color(LEDS_color_t color) {
     for (int i = 0; i < MAX_LED; i++) {
-        notification_leds_J5.set_color(i, color.red, color.green, color.blue);
+        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
 
     }
 }
@@ -105,7 +117,7 @@ void notification_leds_set_color(LEDS_color_t color) {
  */
 void notification_leds_set_brightness(uint8_t brightness) {
 
-    notification_leds_J5.set_brightness(brightness);
+    leds_strip_J5.set_brightness(brightness);
 }
 
 /**
@@ -174,14 +186,11 @@ void read_RFID(void) {
     if (rfid_status == MI_OK) {
         printf_debug("MRFC522 : carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
 
-        toSend[0] = (uint8_t) ((CAN_BUS_RFID_READ_ID >> 8) & 0x00FF);
-        toSend[1] = (uint8_t) (CAN_BUS_RFID_READ_ID & 0x00FF);
-        toSend[2] = id[0];
-        toSend[3] = id[1];
-        toSend[4] = id[2];
-        toSend[5] = id[3];
-        toSend[6] = id[4];
-        toSend[7] = id[5];
+        toSend[0] = (uint8_t) ((ARBITRATION_ID_RFID_READ >> 8) & 0x00FF);
+        toSend[1] = (uint8_t) (ARBITRATION_ID_RFID_READ & 0x00FF);
+        for (uint8_t i = 0; i < 6; i++) {
+            toSend[i+2] = id[i];
+        }
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
             printf_debug("CAN BUS : Error ==> endless loop in read_rfid \n\r");
@@ -205,9 +214,9 @@ void read_IMU(void) {
         HAL_StatusTypeDef canbus_status;
         uint8_t toSend[8] = { 0 };
 
-        printf_debug("BNO085  : Changement etat : %d \n\r", state + 'A');
-        toSend[0] = (uint8_t) ((CAN_BUS_IMU_MOVE_ID >> 8) & 0x00FF);
-        toSend[1] = (uint8_t) (CAN_BUS_IMU_MOVE_ID & 0x00FF);
+        printf_debug("BNO085  : Changement etat : %d \n\r", state);
+        toSend[0] = (uint8_t) ((ARBITRATION_ID_IMU_UPDATE >> 8) & 0x00FF);
+        toSend[1] = (uint8_t) (ARBITRATION_ID_IMU_UPDATE & 0x00FF);
         toSend[2] = state;
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
@@ -226,6 +235,7 @@ void read_touch_buttons(void) {
 
     static bool state_button1 = false;
     static bool state_button2 = false;
+    static bool state_button3 = false;
     bool state_changed = false;
 
     if (state_button1 == false) {
@@ -251,14 +261,27 @@ void read_touch_buttons(void) {
         state_changed = true;
         printf_debug("Touch buttons : button 2 released\n\r");
     }
+    if (state_button3 == false) {
+        if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == true) {
+            state_button3 = true;
+            state_changed = true;
+            printf_debug("Touch buttons : button 3 press detected\n\r");
+        }
+    } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == false) {
+        state_button3 = false;
+        state_changed = true;
+        printf_debug("Touch buttons : button 3 released\n\r");
+    }
+
     if (state_changed) {
         HAL_StatusTypeDef canbus_status;
         uint8_t toSend[8] = { 0 };
 
-        toSend[0] = (uint8_t) ((CAN_BUS_TOUCH_BUTTON_1_ID >> 8) & 0x00FF);
-        toSend[1] = (uint8_t) (CAN_BUS_TOUCH_BUTTON_1_ID & 0x00FF);
+        toSend[0] = (uint8_t) ((ARBITRATION_ID_PROXIMITY_UPDATE >> 8) & 0x00FF);
+        toSend[1] = (uint8_t) (ARBITRATION_ID_PROXIMITY_UPDATE & 0x00FF);
         toSend[2] = (uint8_t) state_button1;
         toSend[3] = (uint8_t) state_button2;
+        toSend[4] = (uint8_t) state_button3;
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
             printf_debug("CAN BUS : Error ==> endless loop in touch button \n\r");
@@ -270,7 +293,7 @@ void read_touch_buttons(void) {
 /**
  *
  */
-uint16_t can_bus_callback_debug_led(uint16_t sender, uint8_t len, uint8_t data[5]) {
+uint16_t can_bus_callback_debug_led(uint16_t sender, uint8_t data[6]) {
 
     switch (data[0]) {
     case 0:
@@ -286,16 +309,16 @@ uint16_t can_bus_callback_debug_led(uint16_t sender, uint8_t len, uint8_t data[5
     case 2:
     default:
         auto_led_debug = true;
-
     }
-
     return 0;
 }
 
 /**
  *
  */
-uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t len, uint8_t data[5]) {
+uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t data[6]) {
+    uint8_t len = data[0];
+
     switch (len) {
     case 1:
         printf("%04X [%d] %02X \r\n", sender, len, data[0]);
@@ -325,13 +348,13 @@ uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t len, uint8_t data[5])
  * NB : Cette fonction est appellée par IT donc interdiction
  * d'appeler directement les communications I2C ou SPI
  */
-uint16_t can_bus_callback_ledRGB_touch_button_1(uint16_t sender, uint8_t len, uint8_t data[6]) {
+uint16_t can_bus_callback_ledRGB_touch_button_1(uint16_t sender, uint8_t data[6]) {
 
     rgbled_button_1_tmp_data.clientDataStruct.rgbLedsMode = (LEDS_mode_t) data[0];
     rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
     rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
     rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
-    rgbled_button_1_tmp_data.clientDataStruct.rgbLedIntensity = data[4];
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedBrightness = data[4];
 
     rgbled_touch_button_1_change_flag = true;
     return 0;
@@ -340,13 +363,13 @@ uint16_t can_bus_callback_ledRGB_touch_button_1(uint16_t sender, uint8_t len, ui
 /**
  *
  */
-uint16_t can_bus_callback_ledRGB_touch_button_2(uint16_t sender, uint8_t len, uint8_t data[6]) {
+uint16_t can_bus_callback_ledRGB_touch_button_2(uint16_t sender, uint8_t data[6]) {
 
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedsMode = (LEDS_mode_t) data[0];
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
-    rgbled_button_2_tmp_data.clientDataStruct.rgbLedIntensity = data[4];
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness = data[4];
 
     rgbled_touch_button_2_change_flag = true;
     return 0;
@@ -356,7 +379,6 @@ uint16_t can_bus_callback_ledRGB_touch_button_2(uint16_t sender, uint8_t len, ui
  *
  */
 void change_ledRGB_touch_button_1(void) {
-    rgbled_touch_button_1_change_flag = false;
     LEDS_color_t color;
     color.blue = rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.blue;
     color.red = rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.red;
@@ -364,14 +386,14 @@ void change_ledRGB_touch_button_1(void) {
     TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_1, rgbled_button_1_tmp_data.clientDataStruct.rgbLedsMode);
     TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, color);
     TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1,
-            rgbled_button_1_tmp_data.clientDataStruct.rgbLedIntensity);
+            rgbled_button_1_tmp_data.clientDataStruct.rgbLedBrightness);
+    rgbled_touch_button_1_change_flag = false;
 }
 
 /**
  *
  */
 void change_ledRGB_touch_button_2(void) {
-    rgbled_touch_button_2_change_flag = false;
     LEDS_color_t color;
     color.blue = rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue;
     color.red = rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red;
@@ -379,35 +401,101 @@ void change_ledRGB_touch_button_2(void) {
     TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_2, rgbled_button_2_tmp_data.clientDataStruct.rgbLedsMode);
     TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, color);
     TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedIntensity);
+            rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness);
+    rgbled_touch_button_2_change_flag = false;
 }
 
 /**
- *  Modification état leds adressables
+ *
  */
-uint16_t can_bus_callback_notification_leds(uint16_t sender, uint8_t len, uint8_t data[6]) {
+void change_ledRGB_touch_button_3(void) {
+    LEDS_color_t color;
+    color.blue = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.blue;
+    color.red = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.red;
+    color.green = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.green;
+    TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_3, rgbled_button_3_tmp_data.clientDataStruct.rgbLedsMode);
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, color);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3,
+            rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness);
+    rgbled_touch_button_3_change_flag = false;
+}
 
-    notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
-    notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
-    notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
-    notification_leds_J5_tmp_data.clientDataStruct.rgbLedIntensity = data[4];
+/**
+ *  Modification état leds adressables : leds strips
+ */
+uint16_t can_bus_callback_leds_strips(uint16_t sender, uint8_t data[6]) {
 
-    notification_leds_J5_change_flag = true;
+    if ((data[0] & 0x01) != 0) {
+        leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
+        leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
+        leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
+        leds_strip_J5_tmp_data.clientDataStruct.rgbLedBrightness = data[4];
+        leds_strip_J5_change_flag = true;
+    }
+
+    if ((data[0] & 0x02) != 0) {
+        leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
+        leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
+        leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
+        leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness = data[4];
+        leds_strip_J6_change_flag = true;
+    }
+
+    if ((data[0] & 0x04) != 0) {
+        leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.red = data[1];
+        leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.green = data[2];
+        leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.blue = data[3];
+        leds_strip_J7_tmp_data.clientDataStruct.rgbLedBrightness = data[4];
+        leds_strip_J7_change_flag = true;
+    }
     return 0;
 }
 
-void change_notification_leds(void) {
-
-    for (int i = 0; i < MAX_LED; i++) {
-        notification_leds_J5.set_color(i, notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.red,
-                notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.green,
-                notification_leds_J5_tmp_data.clientDataStruct.rgbLedsColor.blue);
-        notification_leds_J5.set_brightness(notification_leds_J5_tmp_data.clientDataStruct.rgbLedIntensity);
+/**
+ *
+ */
+void change_leds_strips_J5(void) {
+    for (int i = 0; i < leds_strip_J5.nb_leds (); i++) {
+        leds_strip_J5.set_color(i, leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.red,
+                leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.green,
+                leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.blue);
+        leds_strip_J5.set_brightness(leds_strip_J5_tmp_data.clientDataStruct.rgbLedBrightness);
     }
 
-    notification_leds_J5.send();
-    notification_leds_J5_change_flag = false;
+    leds_strip_J5.send();
+    leds_strip_J5_change_flag = false;
 }
+
+/**
+ *
+ */
+void change_leds_strips_J6(void) {
+    for (int i = 0; i < leds_strip_J6.nb_leds (); i++) {
+        leds_strip_J6.set_color(i, leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red,
+                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green,
+                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue);
+        leds_strip_J6.set_brightness(leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness);
+    }
+
+    leds_strip_J6.send();
+    leds_strip_J6_change_flag = false;
+}
+
+/**
+ *
+ */
+void change_leds_strips_J7(void) {
+    for (int i = 0; i < leds_strip_J7.nb_leds (); i++) {
+        leds_strip_J7.set_color(i, leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.red,
+                leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.green,
+                leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.blue);
+        leds_strip_J7.set_brightness(leds_strip_J7_tmp_data.clientDataStruct.rgbLedBrightness);
+    }
+
+    leds_strip_J7.send();
+    leds_strip_J7_change_flag = false;
+}
+
 
 /**
  *
@@ -424,7 +512,7 @@ void stop_vibrating_motor(void) {
 /**
  * Modification état moteur vibrant
  */
-uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t len, uint8_t data[6]) {
+uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]) {
     time_for_stop_vibrating_motor = HAL_GetTick() + (((uint32_t) data[0]) * (uint32_t) VIBRATING_MOTOR_BASE_TIME);
     start_vibrating_motor();
     return 0;
@@ -435,7 +523,7 @@ uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t len, uint8_t 
  */
 void my_setup(void) {
 
-//    tests_unitaires();
+    tests_unitaires();
     printf_debug("\n\r--- Application start ! ---\n\r");
 
     config_SPI_before_RFID();
@@ -449,12 +537,11 @@ void my_setup(void) {
 
     can_bus.begin();
 
-    can_bus.register_callback_function(CAN_BUS_TOUCH_BUTTON_1_ID, can_bus_callback_ledRGB_touch_button_1);
-    can_bus.register_callback_function(CAN_BUS_TOUCH_BUTTON_2_ID, can_bus_callback_ledRGB_touch_button_2);
-    can_bus.register_callback_function(CAN_BUS_VIBRATING_MOTOR_ID, can_bus_callback_vibrating_motor);
-    can_bus.register_callback_function(CAN_BUS_NOTIFICATION_LEDS_ID, can_bus_callback_notification_leds);
-    can_bus.register_callback_function(CAN_BUS_LED_DEBUG_ID, can_bus_callback_debug_led);
-    can_bus.register_callback_function(CAN_BUS_UART_DEBUG_ID, can_bus_callback_uart_tx);
+    can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button_1);
+    can_bus.register_callback_function((arbitrationId_t)0x8888, can_bus_callback_vibrating_motor);
+    can_bus.register_callback_function(ARBITRATION_ID_LEDSTRIP_CONFIG, can_bus_callback_leds_strips);
+    can_bus.register_callback_function(ARBITRATION_ID_LED_CONFIG, can_bus_callback_debug_led);
+    can_bus.register_callback_function(ARBITRATION_ID_TIME_CONFIG, can_bus_callback_uart_tx);
 
     printf_debug("\n\r--- Application start main loop ---\n\r");
 
@@ -503,8 +590,22 @@ void my_loop(void) {
             change_ledRGB_touch_button_2();
         }
 
-        if (notification_leds_J5_change_flag) {
-            change_notification_leds();
+        //  Données modifiées par le BUS CAN a transmettre
+        if (rgbled_touch_button_3_change_flag == true) {
+            change_ledRGB_touch_button_3();
+        }
+
+
+        if (leds_strip_J5_change_flag) {
+            change_leds_strips_J5();
+        }
+
+        if (leds_strip_J6_change_flag) {
+            change_leds_strips_J6();
+        }
+
+        if (leds_strip_J7_change_flag) {
+            change_leds_strips_J7();
         }
 
         // Arrêt moteur vibrant
@@ -512,14 +613,14 @@ void my_loop(void) {
             stop_vibrating_motor();
         }
 
-        // Ecriture message CAN de vie
+        // Ecriture message CAN de vie (pour vérifier que le can fonctionne)
         if (current_time >= time_for_can_bus_automatic_message) {
             uint8_t toSend[8] = { 0xC0, 0x1D, 0xC0, 0xFF, 0xEE, 0xBA, 0xDB, 0xAD };
             can_bus.send(toSend, 8);
             time_for_can_bus_automatic_message += PERIODE_CAN_BUS_AUTOMATIC_MESSAGE;
         }
 
-        // Modification état led debug
+        // Modification état led debug (pour vérifier que l'application fonctionne)
         if (current_time >= time_for_change_led_state) {
             time_for_change_led_state += change_state_user_led();
         }

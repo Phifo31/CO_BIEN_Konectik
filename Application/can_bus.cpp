@@ -7,16 +7,17 @@
 
 #include "main.h"
 
-#include "can_bus.h"
+#include "../../Common/can_ids.h"
 
+#include "can_bus.h"
 
 // @todo globales à cause du callback : à corriger (mais je ne sais pas comment !)
 
-  FDCAN_RxHeaderTypeDef rxHeader_; //!< l'entete
-  uint8_t rxData_[12]; //!< le buffer de reception
+FDCAN_RxHeaderTypeDef rxHeader_; //!< l'entete
+uint8_t rxData_[12]; //!< le buffer de reception
 
-  callback_function_t table_callbacks_ [MAX_CALLBACK_FUNCTIONS]; //!< table des pointeurs de fonction
-  uint8_t taille_table_; // taille de la table = nb de fonctions appelables
+callback_function_t table_callbacks_[MAX_CALLBACK_FUNCTIONS]; //!< table des pointeurs de fonction
+uint8_t taille_table_; // taille de la table = nb de fonctions appelables
 
 /**
  *
@@ -90,9 +91,8 @@ HAL_StatusTypeDef CAN_BUS::send(uint8_t *txData, uint8_t len) {
     if ((status = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader_, txData)) != HAL_OK) {
 
     }
-  return status;
+    return status;
 }
-
 
 /**
  * Initialisation de la table des pointeurs de fonctions.
@@ -101,20 +101,19 @@ HAL_StatusTypeDef CAN_BUS::send(uint8_t *txData, uint8_t len) {
  * A utiliser avec précaution
  *
  */
-HAL_StatusTypeDef CAN_BUS::register_callback_function (uint16_t filtre, uint16_t (*fp)(uint16_t, uint8_t, uint8_t*)) {
+HAL_StatusTypeDef CAN_BUS::register_callback_function(arbitrationId_t filtre, uint16_t (*fp)(uint16_t, uint8_t*)) {
 
-    table_callbacks_ [taille_table_].ident = filtre;
-    table_callbacks_ [taille_table_].function_pointer = *fp;
+    table_callbacks_[taille_table_].ident = filtre;
+    table_callbacks_[taille_table_].function_pointer = *fp;
     taille_table_ += 1;
 
     return HAL_OK;
 }
 
-
 /**
- * fonction du driver HAL appelé par l'IT de reception
+ * fonction du driver HAL appelée par l'interruption de réception
  *
- * elle parcours la table des pointeurs de fonction afin de reperer l'ident et appeler la fonction correspondante
+ * Elle parcours la table des pointeurs de fonction afin de repérer l'ident et appeler la fonction correspondante
  */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 
@@ -123,12 +122,11 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rxHeader_, rxData_) != HAL_OK) {
             /* Reception Error */
             Error_Handler();
-        }
-        else {
+        } else {
             uint16_t id = (rxData_[0] << 8) + rxData_[1];
-            for (int i =0; i < taille_table_; i++) {
-                if (id == table_callbacks_ [i].ident) {
-                    table_callbacks_ [i].function_pointer (0x9999, rxData_[2], &rxData_[3]);
+            for (int i = 0; i < taille_table_; i++) {
+                if (id == table_callbacks_[i].ident) {
+                    table_callbacks_[i].function_pointer(0x9999, &rxData_[2]);
                     break;
                 }
             }
@@ -141,5 +139,4 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 }
 
 // end of file
-
 

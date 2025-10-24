@@ -23,7 +23,7 @@ class LED_WS2812 {
 
 public:
 
-    LED_WS2812  ();
+    LED_WS2812  (uint32_t channel, uint16_t nb_leds);
 
     /**
      *
@@ -45,6 +45,10 @@ public:
      */
     void reset_flag(void);
 
+    /**
+     *
+     */
+    uint16_t nb_leds (void);
 
 private:
     uint8_t LED_data_[MAX_LED][4];
@@ -55,13 +59,12 @@ private:
         uint8_t LED_mod_[MAX_LED][4];  // for brightness
 #endif
 
+uint32_t timer_channel_;
+uint16_t nb_leds_;
 
-
-void notification_leds_set_color (LEDS_color_t color);
-void notification_leds_set_mode (LEDS_mode_t mode);
-void notification_leds_set_brightness (uint8_t brightness);
-
-
+void leds_strip_set_color (LEDS_color_t color);
+void leds_strip_set_mode (LEDS_mode_t mode);
+void leds_strip_set_brightness (uint8_t brightness);
 };
 
 #ifdef __cplusplus
