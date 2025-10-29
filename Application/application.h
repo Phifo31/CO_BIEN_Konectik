@@ -45,14 +45,22 @@ extern "C" {
 #define MAX_LED 100
 #define USE_BRIGHTNESS 1
 
-#define LEDS_STRIPS_J5_NB_LEDS 12
-#define LEDS_STRIPS_J6_NB_LEDS 15
-#define LEDS_STRIPS_J7_NB_LEDS 23
+//#define LEDS_STRIPS_J5_NB_LEDS 28
+#define LEDS_STRIPS_J6_NB_LEDS 2
+//#define LEDS_STRIPS_J7_NB_LEDS 31
+
+#define LEDS_STRIPS_J5_NB_LEDS 5
+#define LEDS_STRIPS_J6_NB_LEDS 2
+#define LEDS_STRIPS_J7_NB_LEDS 5
+
 
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
+extern UART_HandleTypeDef huart2;
+extern FDCAN_HandleTypeDef hfdcan1;
 extern DMA_HandleTypeDef hdma_tim1_ch1;
+extern DMA_HandleTypeDef hdma_tim1_ch3;
 
 void my_setup (void);
 void my_loop (void);

@@ -104,8 +104,19 @@ void LED_WS2812::send(void) {
         indx++;
     }
 
-    HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t*) pwm_data, indx);
-//    while (!datasentflag) {};
+    switch (timer_channel_) {
+    case TIM_CHANNEL_1 :
+        HAL_TIM_PWM_Start_DMA(&htim1, timer_channel_, (uint32_t*) pwm_data, indx);
+        break;
+
+    case TIM_CHANNEL_3 :
+        HAL_TIMEx_PWMN_Start_DMA(&htim1, TIM_CHANNEL_3, (uint32_t*) pwm_data, indx);
+        break;
+
+    default :
+        break;
+    }
+
     datasentflag_ = false;
 }
 

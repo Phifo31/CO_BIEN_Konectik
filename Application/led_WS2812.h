@@ -18,7 +18,6 @@ extern "C" {
 
 #define PI 3.14159265
 
-
 class LED_WS2812 {
 
 public:

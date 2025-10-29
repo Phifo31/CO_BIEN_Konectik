@@ -8,6 +8,7 @@
 #include "main.h"
 
 #include "../../Common/can_ids.h"
+#include "application.h"
 
 #include "can_bus.h"
 

@@ -37,7 +37,7 @@ volatile bool auto_led_debug = true;
 volatile uint32_t time_for_stop_vibrating_motor = UINT32_MAX;
 
 LED_WS2812 leds_strip_J5 (TIM_CHANNEL_1, LEDS_STRIPS_J5_NB_LEDS);
-LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS);
+//LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS); // inutilisable sur la konectik v1
 LED_WS2812 leds_strip_J7 (TIM_CHANNEL_3, LEDS_STRIPS_J7_NB_LEDS);
 
 typedef union RGBLED_TOUCH_BUTTON_DATA {
@@ -68,7 +68,7 @@ volatile bool leds_strip_J6_change_flag = false;
 volatile bool leds_strip_J7_change_flag = false;
 
 /**
- * Gestion de la led de vie (tant qu'elle n'est pas utilisé par le BUS CAN
+ * Gestion de la led de vie (tant qu'elle n'est pas utilisée par le BUS CAN
  *
  */
 uint32_t change_state_user_led(void) {
@@ -89,35 +89,42 @@ uint32_t change_state_user_led(void) {
         }
         time = USER_LED_HIGH_TIME;
     }
-
     return time;
 }
 
 /**
- * @todo Si il y a plusieurs chaines de leds : attention cette fonction ne fonctionne pas
+ * Fonction appelée par le fin de la transmission strip led par DMA
+ *
+ * @todo Ajouter le channel manquant
  */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
-    HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
 
-    leds_strip_J5.reset_flag();
-}
-
-/**
- *
- */
-void notification_leds_set_color(LEDS_color_t color) {
-    for (int i = 0; i < MAX_LED; i++) {
-        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
-
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+        HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_1);
+        leds_strip_J5.reset_flag();
+    }
+    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3) {
+        HAL_TIMEx_PWMN_Stop_DMA(htim, TIM_CHANNEL_3);
+        leds_strip_J7.reset_flag();
     }
 }
 
 /**
  *
  */
-void notification_leds_set_brightness(uint8_t brightness) {
+void strip_leds_set_color(LEDS_color_t color) {
+    for (int i = 0; i < MAX_LED; i++) {
+        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
+    }
+}
+
+/**
+ *
+ */
+void strip_leds_set_brightness(uint8_t brightness) {
 
     leds_strip_J5.set_brightness(brightness);
+    leds_strip_J7.set_brightness(brightness);
 }
 
 /**
@@ -466,20 +473,20 @@ void change_leds_strips_J5(void) {
     leds_strip_J5_change_flag = false;
 }
 
-/**
- *
- */
-void change_leds_strips_J6(void) {
-    for (int i = 0; i < leds_strip_J6.nb_leds (); i++) {
-        leds_strip_J6.set_color(i, leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red,
-                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green,
-                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue);
-        leds_strip_J6.set_brightness(leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness);
-    }
-
-    leds_strip_J6.send();
-    leds_strip_J6_change_flag = false;
-}
+///**
+// *
+// */
+//void change_leds_strips_J6(void) {
+//    for (int i = 0; i < leds_strip_J6.nb_leds (); i++) {
+//        leds_strip_J6.set_color(i, leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red,
+//                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green,
+//                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue);
+//        leds_strip_J6.set_brightness(leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness);
+//    }
+//
+//    leds_strip_J6.send();
+//    leds_strip_J6_change_flag = false;
+//}
 
 /**
  *
@@ -523,7 +530,7 @@ uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]) {
  */
 void my_setup(void) {
 
-    tests_unitaires();
+    //tests_unitaires();
     printf_debug("\n\r--- Application start ! ---\n\r");
 
     config_SPI_before_RFID();
@@ -595,14 +602,13 @@ void my_loop(void) {
             change_ledRGB_touch_button_3();
         }
 
-
         if (leds_strip_J5_change_flag) {
             change_leds_strips_J5();
         }
 
-        if (leds_strip_J6_change_flag) {
-            change_leds_strips_J6();
-        }
+        //if (leds_strip_J6_change_flag) {
+        //    change_leds_strips_J6();
+        //}
 
         if (leds_strip_J7_change_flag) {
             change_leds_strips_J7();

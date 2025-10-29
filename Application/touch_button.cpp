@@ -74,12 +74,14 @@ bool TOUCH_BUTTON_verif_communication(uint8_t address) {
  */
 bool TOUCH_BUTTON_get_button_state(uint8_t address) {
     HAL_StatusTypeDef status;
-    uint8_t data[1] = { TOUCH_BUTTON_STATE };
+    uint8_t data[2] = { TOUCH_BUTTON_STATE, 0x00 };
 
     if ((status = HAL_I2C_Master_Transmit(&hi2c1, address, data, 1, MY_I2C_TIMEOUT)) != HAL_ERROR) {
         if ((status = HAL_I2C_Master_Receive(&hi2c1, address, data, 1, MY_I2C_TIMEOUT)) != HAL_ERROR) {
-            if (data[0] != 0)
+            if (data[0] == TOUCH_BUTTON_PRESSED)
                 return true;
+            if (data[0] == TOUCH_BUTTON_RELEASED)
+                return false;
         }
     }
     return false;
