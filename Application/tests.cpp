@@ -31,7 +31,7 @@ extern Adafruit_BNO08x bno08x;
 //#define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
 extern LED_WS2812 leds_strip_J5;
-//LED_WS2812 leds_strip_J6;
+extern LED_WS2812 leds_strip_J6;
 extern LED_WS2812 leds_strip_J7;
 
 extern CAN_BUS can_bus;
@@ -50,6 +50,10 @@ uint8_t txData[8];
 uint8_t rxData[8];
 
 uint32_t txMailBox;
+
+uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
+void start_vibrating_motor(uint8_t dc);
+void stop_vibrating_motor(void);
 
 uint16_t msec2sec(uint32_t n, uint16_t *reste) {
 
@@ -602,32 +606,38 @@ void test_driver_strips_leds(void) {
         leds_strip_J5.set_color(i, 102, 0, 235);
     }
 
+    for (int i = 0; i < leds_strip_J6.nb_leds(); i++) {
+        leds_strip_J6.set_color(i, 102, 0, 235);
+    }
+
     for (int i = 0; i < leds_strip_J7.nb_leds(); i++) {
         leds_strip_J7.set_color(i, 102, 0, 235);
     }
 
     HAL_TIM_Base_Start(&htim1);
 
-    //leds_strip_J5.send();
-    HAL_Delay(10);
+    leds_strip_J5.send();
+    leds_strip_J6.send();
     leds_strip_J7.send();
 
     while (ENDLESS_LOOP) {
 
         for (int i = 0; i < 46; i++) {
             leds_strip_J5.set_brightness(i);
+            leds_strip_J6.set_brightness(i);
             leds_strip_J7.set_brightness(i);
             leds_strip_J5.send();
-            HAL_Delay(10);
+            leds_strip_J6.send();
             leds_strip_J7.send();
             HAL_Delay(50);
         }
 
         for (int i = 45; i >= 0; i--) {
             leds_strip_J5.set_brightness(i);
+            leds_strip_J6.set_brightness(i);
             leds_strip_J7.set_brightness(i);
             leds_strip_J5.send();
-            HAL_Delay(10);
+            leds_strip_J6.send();
             leds_strip_J7.send();
             HAL_Delay(50);
         }
@@ -885,6 +895,38 @@ void test_CAN_BUS_send_receive(void) {
     }
 }
 
+
+/**
+ *
+ */
+extern uint32_t time_for_stop_vibrating_motor;
+void test_driver_moteur_vibrant (void)
+{
+    uint8_t data[6];
+
+    HAL_TIM_Base_Init(&htim4);
+
+    for (int i = 0; i < 3; i++) {
+        start_vibrating_motor(50);
+        HAL_Delay(100);
+        stop_vibrating_motor();
+        HAL_Delay(1900);
+    }
+
+
+    //uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
+
+    while (1) {
+        data[0] = 10; // durée
+        data[1] = 77; // rapport cyclique
+
+        can_bus_callback_vibrating_motor (0xffff, data);
+        while (HAL_GetTick() <= time_for_stop_vibrating_motor);
+        stop_vibrating_motor();
+        HAL_Delay(2000);
+    }
+}
+
 /**
  *:
  */
@@ -898,7 +940,7 @@ void tests_unitaires(void) {
     //test_driver_touch_button_and_RGB_leds ();
 
     // test_unitaires_strip_leds();
-    test_driver_strips_leds ();
+    //test_driver_strips_leds ();
 
     //testIMU_connection_and_detection();
     //test_RFID_connection();
@@ -911,5 +953,7 @@ void tests_unitaires(void) {
     //test_integration_one_touch_button_and_RGB_leds();
     //test_integration_two_touch_buttons_and_RGB_leds();
     //test_integration_three_touch_buttons_and_RGB_leds ();
+
+    test_driver_moteur_vibrant ();
 }
 

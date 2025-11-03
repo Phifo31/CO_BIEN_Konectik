@@ -27,17 +27,6 @@ extern "C" {
 
 #define VIBRATING_MOTOR_BASE_TIME 10
 
-//#define CAN_BUS_RFID_READ_ID 1120 		// 0x0460
-//#define CAN_BUS_IMU_MOVE_ID   1520		// 0x05F0
-//#define CAN_BUS_TOUCH_BUTTON_1_ID 1220	// 0x04c4
-//#define CAN_BUS_TOUCH_BUTTON_2_ID 1820	// 0x071c
-//
-//#define CAN_BUS_LED_DEBUG_ID 1310		// 0x051E
-//#define CAN_BUS_UART_DEBUG_ID 0xFFF1
-//#define CAN_BUS_VIBRATING_MOTOR_ID 0xFFF2
-//#define CAN_BUS_NOTIFICATION_LEDS_ID 2310	// 0x0906
-
-
 #define TOUCH_BUTTON_ADDRESS_1    0x38
 #define TOUCH_BUTTON_ADDRESS_2    0x48
 #define TOUCH_BUTTON_ADDRESS_3    0x68
@@ -46,17 +35,18 @@ extern "C" {
 #define USE_BRIGHTNESS 1
 
 //#define LEDS_STRIPS_J5_NB_LEDS 28
-#define LEDS_STRIPS_J6_NB_LEDS 2
+//#define LEDS_STRIPS_J6_NB_LEDS 2
 //#define LEDS_STRIPS_J7_NB_LEDS 31
 
 #define LEDS_STRIPS_J5_NB_LEDS 5
-#define LEDS_STRIPS_J6_NB_LEDS 2
-#define LEDS_STRIPS_J7_NB_LEDS 5
+#define LEDS_STRIPS_J6_NB_LEDS 6
+#define LEDS_STRIPS_J7_NB_LEDS 7
 
 
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim4;
 extern UART_HandleTypeDef huart2;
 extern FDCAN_HandleTypeDef hfdcan1;
 extern DMA_HandleTypeDef hdma_tim1_ch1;

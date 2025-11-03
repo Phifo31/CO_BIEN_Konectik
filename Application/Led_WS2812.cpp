@@ -106,7 +106,11 @@ void LED_WS2812::send(void) {
 
     switch (timer_channel_) {
     case TIM_CHANNEL_1 :
-        HAL_TIM_PWM_Start_DMA(&htim1, timer_channel_, (uint32_t*) pwm_data, indx);
+        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t*) pwm_data, indx);
+        break;
+
+    case TIM_CHANNEL_2 :
+        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_2, (uint32_t*) pwm_data, indx);
         break;
 
     case TIM_CHANNEL_3 :

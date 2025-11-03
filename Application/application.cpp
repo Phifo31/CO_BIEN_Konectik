@@ -36,9 +36,9 @@ CAN_BUS can_bus(0x431);
 volatile bool auto_led_debug = true;
 volatile uint32_t time_for_stop_vibrating_motor = UINT32_MAX;
 
-LED_WS2812 leds_strip_J5 (TIM_CHANNEL_1, LEDS_STRIPS_J5_NB_LEDS);
-//LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS); // inutilisable sur la konectik v1
-LED_WS2812 leds_strip_J7 (TIM_CHANNEL_3, LEDS_STRIPS_J7_NB_LEDS);
+LED_WS2812 leds_strip_J5(TIM_CHANNEL_1, LEDS_STRIPS_J5_NB_LEDS);
+LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS);
+LED_WS2812 leds_strip_J7(TIM_CHANNEL_3, LEDS_STRIPS_J7_NB_LEDS);
 
 typedef union RGBLED_TOUCH_BUTTON_DATA {
     uint8_t CANBUSdataArray[6];
@@ -49,7 +49,6 @@ typedef union RGBLED_TOUCH_BUTTON_DATA {
         uint8_t rgbLedBrightness;
     } clientDataStruct;
 } rgbled_data_t;
-
 
 volatile rgbled_data_t rgbled_button_1_tmp_data;
 volatile rgbled_data_t rgbled_button_2_tmp_data;
@@ -99,13 +98,23 @@ uint32_t change_state_user_led(void) {
  */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
 
-    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1) {
+    switch (htim->Channel) {
+    case HAL_TIM_ACTIVE_CHANNEL_1:
         HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_1);
         leds_strip_J5.reset_flag();
-    }
-    if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3) {
+        break;
+
+    case HAL_TIM_ACTIVE_CHANNEL_2:
+        HAL_TIM_PWM_Stop_DMA(htim, TIM_CHANNEL_2);
+        leds_strip_J6.reset_flag();
+        break;
+
+    default:
+    case HAL_TIM_ACTIVE_CHANNEL_3:
         HAL_TIMEx_PWMN_Stop_DMA(htim, TIM_CHANNEL_3);
         leds_strip_J7.reset_flag();
+        break;
+
     }
 }
 
@@ -196,7 +205,7 @@ void read_RFID(void) {
         toSend[0] = (uint8_t) ((ARBITRATION_ID_RFID_READ >> 8) & 0x00FF);
         toSend[1] = (uint8_t) (ARBITRATION_ID_RFID_READ & 0x00FF);
         for (uint8_t i = 0; i < 6; i++) {
-            toSend[i+2] = id[i];
+            toSend[i + 2] = id[i];
         }
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
@@ -462,7 +471,7 @@ uint16_t can_bus_callback_leds_strips(uint16_t sender, uint8_t data[6]) {
  *
  */
 void change_leds_strips_J5(void) {
-    for (int i = 0; i < leds_strip_J5.nb_leds (); i++) {
+    for (int i = 0; i < leds_strip_J5.nb_leds(); i++) {
         leds_strip_J5.set_color(i, leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.red,
                 leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.green,
                 leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.blue);
@@ -492,7 +501,7 @@ void change_leds_strips_J5(void) {
  *
  */
 void change_leds_strips_J7(void) {
-    for (int i = 0; i < leds_strip_J7.nb_leds (); i++) {
+    for (int i = 0; i < leds_strip_J7.nb_leds(); i++) {
         leds_strip_J7.set_color(i, leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.red,
                 leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.green,
                 leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.blue);
@@ -503,16 +512,19 @@ void change_leds_strips_J7(void) {
     leds_strip_J7_change_flag = false;
 }
 
+/**
+ * dc : duty cycle in ]0..99] interval
+ */
+void start_vibrating_motor(uint8_t dc) {
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, dc);
+    HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+}
 
 /**
  *
  */
-void start_vibrating_motor(void) {
-    HAL_GPIO_WritePin(CMD_VIB_GPIO_Port, CMD_VIB_Pin, GPIO_PIN_SET);
-}
-
 void stop_vibrating_motor(void) {
-    HAL_GPIO_WritePin(CMD_VIB_GPIO_Port, CMD_VIB_Pin, GPIO_PIN_RESET);
+    HAL_TIM_PWM_Stop (&htim4, TIM_CHANNEL_1);
     time_for_stop_vibrating_motor = UINT32_MAX;
 }
 
@@ -521,7 +533,7 @@ void stop_vibrating_motor(void) {
  */
 uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]) {
     time_for_stop_vibrating_motor = HAL_GetTick() + (((uint32_t) data[0]) * (uint32_t) VIBRATING_MOTOR_BASE_TIME);
-    start_vibrating_motor();
+    start_vibrating_motor(data[1]);
     return 0;
 }
 
@@ -545,7 +557,7 @@ void my_setup(void) {
     can_bus.begin();
 
     can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button_1);
-    can_bus.register_callback_function((arbitrationId_t)0x8888, can_bus_callback_vibrating_motor);
+    can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor);
     can_bus.register_callback_function(ARBITRATION_ID_LEDSTRIP_CONFIG, can_bus_callback_leds_strips);
     can_bus.register_callback_function(ARBITRATION_ID_LED_CONFIG, can_bus_callback_debug_led);
     can_bus.register_callback_function(ARBITRATION_ID_TIME_CONFIG, can_bus_callback_uart_tx);
