@@ -253,38 +253,81 @@ void read_touch_buttons(void) {
     static bool state_button2 = false;
     static bool state_button3 = false;
     bool state_changed = false;
+    static uint8_t state_send = 0;
+
+    // --- Fixer couleur par défaut des boutons ---
+    LEDS_color_t default_color;
+
+	default_color.red   = 255;   // intensity red
+	default_color.green = 255;     // intensity green
+	default_color.blue  = 255;   // intensity blue
+
+	LEDS_color_t home_color;
+
+	home_color.red   = 128;   // intensity red
+	home_color.green = 0;     // intensity green
+	home_color.blue  = 128;   // intensity blue
+
+	LEDS_color_t scroll_color;
+
+	scroll_color.red   = 255;   // intensity red
+	scroll_color.green = 165;     // intensity green
+	scroll_color.blue  = 0;   // intensity blue
+
 
     if (state_button1 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
+
+        	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, home_color);
+        	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+
             state_button1 = true;
+            state_send= 01;
             state_changed = true;
             printf_debug("Touch buttons : button 1 press detected\n\r");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == false) {
+
+    	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
+    	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+
         state_button1 = false;
+        state_send= 00;
         state_changed = true;
         printf_debug("Touch buttons : button 1 released\n\r");
     }
 
     if (state_button2 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
+
+        	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, scroll_color);
+        	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+
             state_button2 = true;
+            state_send= 02;
             state_changed = true;
             printf_debug("Touch buttons : button 2 press detected\n\r");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == false) {
+
+    	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
+    	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+
         state_button2 = false;
+        state_send= 00;
         state_changed = true;
         printf_debug("Touch buttons : button 2 released\n\r");
     }
     if (state_button3 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == true) {
             state_button3 = true;
+            state_send = 03;
             state_changed = true;
             printf_debug("Touch buttons : button 3 press detected\n\r");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == false) {
         state_button3 = false;
+        state_send= 00;
         state_changed = true;
         printf_debug("Touch buttons : button 3 released\n\r");
     }
@@ -293,11 +336,11 @@ void read_touch_buttons(void) {
         HAL_StatusTypeDef canbus_status;
         uint8_t toSend[8] = { 0 };
 
-        toSend[0] = (uint8_t) ((ARBITRATION_ID_PROXIMITY_UPDATE >> 8) & 0x00FF);
-        toSend[1] = (uint8_t) (ARBITRATION_ID_PROXIMITY_UPDATE & 0x00FF);
-        toSend[2] = (uint8_t) state_button1;
-        toSend[3] = (uint8_t) state_button2;
-        toSend[4] = (uint8_t) state_button3;
+        toSend[0] = (uint8_t) ((ARBITRATION_ID_SENSORS_UPDATE >> 8) & 0x00FF);
+        toSend[1] = (uint8_t) (ARBITRATION_ID_SENSORS_UPDATE & 0x00FF);
+        toSend[2] = (uint8_t) state_send;
+        //toSend[3] = (uint8_t) state_button2;
+        //toSend[4] = (uint8_t) state_button3;
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
             printf_debug("CAN BUS : Error ==> endless loop in touch button \n\r");
@@ -555,6 +598,25 @@ void my_setup(void) {
     bno08x.setup();
 
     can_bus.begin();
+
+    // --- Fixer couleur par défaut des boutons ---
+	LEDS_color_t default_color;
+
+	default_color.red   = 255;   // intensité rouge
+	default_color.green = 255;     // intensité verte
+	default_color.blue  = 255;   // intensité bleue
+
+	// Bouton 1
+	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
+	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255); // max
+
+	// Bouton 2
+	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
+	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+
+	// Bouton 3
+	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, default_color);
+	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3, 255);
 
     can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button_1);
     can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor);
