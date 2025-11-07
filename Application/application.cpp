@@ -585,7 +585,7 @@ uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]) {
  */
 void my_setup(void) {
 
-    //tests_unitaires();
+    tests_unitaires();
     printf_debug("\n\r--- Application start ! ---\n\r");
 
     config_SPI_before_RFID();

@@ -50,7 +50,8 @@
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Application"/>
-									<listOptionValue builtIn="false" value="../../Adafruit_BNO08x/src/hs2"/>
+									<listOptionValue builtIn="false" value="../../Adafruit_BNO08x/src"/>
+									<listOptionValue builtIn="false" value="../../Adafruit_BNO08x/src/sh2"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.764354253" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -69,6 +70,7 @@
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Application"/>
+									<listOptionValue builtIn="false" value="../../Adafruit_BNO08x/src"/>
 									<listOptionValue builtIn="false" value="../../Adafruit_BNO08x/src/sh2"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp.1911511279" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp"/>

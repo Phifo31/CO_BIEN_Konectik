@@ -30,4 +30,26 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>Adafruit_BNO08x/sh2.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2.c</locationURI>
+		</link>
+		<link>
+			<name>Adafruit_BNO08x/sh2_SensorValue.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2_SensorValue.c</locationURI>
+		</link>
+		<link>
+			<name>Adafruit_BNO08x/sh2_util.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/sh2_util.c</locationURI>
+		</link>
+		<link>
+			<name>Adafruit_BNO08x/shtp.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Adafruit_BNO08x/src/shtp.c</locationURI>
+		</link>
+	</linkedResources>
 </projectDescription>

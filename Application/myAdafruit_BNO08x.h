@@ -46,7 +46,6 @@ extern "C" {
 //#include <Wire.h>
 
 
-
 #define BNO08x_I2CADDR_DEFAULT 0x4A ///< The default I2C address
 
 /* Additional Activities not listed in SH-2 lib */

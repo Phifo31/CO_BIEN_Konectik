@@ -729,6 +729,7 @@ void test_RFID_connection(void) {
     printf("\n\r--- MRFC 522 test ---\n\r");
     // Try to initialize! _MFRC522_Reset(); // inutile, le init fait le reset
     config_SPI_before_RFID();
+    //config_SPI_before_IMU();
 
     //while (1) {
     RFID_MFRC522_init();
@@ -943,7 +944,7 @@ void tests_unitaires(void) {
     //test_driver_strips_leds ();
 
     //testIMU_connection_and_detection();
-    //test_RFID_connection();
+    test_RFID_connection();
     //test_IMU_and_RFID_communication();
 
     //test_CAN_BUS_send_only();
@@ -954,6 +955,6 @@ void tests_unitaires(void) {
     //test_integration_two_touch_buttons_and_RGB_leds();
     //test_integration_three_touch_buttons_and_RGB_leds ();
 
-    test_driver_moteur_vibrant ();
+    //test_driver_moteur_vibrant ();
 }
 
