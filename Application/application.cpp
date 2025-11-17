@@ -20,8 +20,6 @@
 #include "application.h"
 #include "led_WS2812.h"
 
-#define printf_debug printf
-
 void tests_unitaires(void);
 
 // Definition des objets et des variables globaux
@@ -37,7 +35,7 @@ volatile bool auto_led_debug = true;
 volatile uint32_t time_for_stop_vibrating_motor = UINT32_MAX;
 
 LED_WS2812 leds_strip_J5(TIM_CHANNEL_1, LEDS_STRIPS_J5_NB_LEDS);
-LED_WS2812 leds_strip_J6 (TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS);
+LED_WS2812 leds_strip_J6(TIM_CHANNEL_2, LEDS_STRIPS_J6_NB_LEDS);
 LED_WS2812 leds_strip_J7(TIM_CHANNEL_3, LEDS_STRIPS_J7_NB_LEDS);
 
 typedef union RGBLED_TOUCH_BUTTON_DATA {
@@ -66,6 +64,31 @@ volatile bool leds_strip_J5_change_flag = false;
 volatile bool leds_strip_J6_change_flag = false;
 volatile bool leds_strip_J7_change_flag = false;
 
+MFRC522_t myMFRC522 = { &hspi1, RFID_SS_GPIO_Port, RFID_SS_Pin, RFID_RST_GPIO_Port, RFID_RST_Pin };
+
+/**
+ * Affichage de tick système en secondes et milli-secondes
+ */
+uint16_t seconds;
+uint16_t reste;
+uint16_t msec2sec(uint32_t n, uint16_t *reste) {
+
+    // Récupéré là mais je ne comprend rien
+    // https://stackoverflow.com/questions/1294885/convert-milliseconds-to-seconds-in-c
+    //  uint32_t q, r, t;
+    //n = n + 500; pourquoi ?
+    //t = (n >> 7) + (n >> 8) + (n >> 12);
+    //q = (n >> 1) + t + (n >> 15) + (t >> 11) + (t >> 14);
+    //q = q >> 9;
+    //r = n - q*1000;
+    //return q + ((r + 24) >> 10);
+
+    // Donc voici ma version
+    uint32_t q = n / 1000;
+    *reste = n - 1000 * q;
+    return (uint16_t) q;
+}
+
 /**
  * Gestion de la led de vie (tant qu'elle n'est pas utilisée par le BUS CAN
  *
@@ -92,9 +115,8 @@ uint32_t change_state_user_led(void) {
 }
 
 /**
- * Fonction appelée par le fin de la transmission strip led par DMA
+ * Fonction appelée par la fin de la transmission strip led par DMA
  *
- * @todo Ajouter le channel manquant
  */
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
 
@@ -118,23 +140,23 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
     }
 }
 
-/**
- *
- */
-void strip_leds_set_color(LEDS_color_t color) {
-    for (int i = 0; i < MAX_LED; i++) {
-        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
-    }
-}
-
-/**
- *
- */
-void strip_leds_set_brightness(uint8_t brightness) {
-
-    leds_strip_J5.set_brightness(brightness);
-    leds_strip_J7.set_brightness(brightness);
-}
+///**
+// *
+// */
+//void strip_leds_set_color(LEDS_color_t color) {
+//    for (int i = 0; i < MAX_LED; i++) {
+//        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
+//    }
+//}
+//
+///**
+// *
+// */
+//void strip_leds_set_brightness(uint8_t brightness) {
+//
+//    leds_strip_J5.set_brightness(brightness);
+//    leds_strip_J7.set_brightness(brightness);
+//}
 
 /**
  *
@@ -187,33 +209,42 @@ void config_SPI_before_RFID(void) {
 /**
  * Lecture de l'état du RFID et si un badge est lu envoi l'identifiant sur le bus can
  *
- *
  */
 void read_RFID(void) {
     RFID_MFRC522_Status_t rfid_status;
     HAL_StatusTypeDef canbus_status;
+    static bool is_card_detected = false;
 
     uint8_t toSend[8] = { 0 };
     uint8_t id[10];
-    uint8_t type[10];
 
     config_SPI_before_RFID();
-    rfid_status = RFID_MFRC522_check(id, type);
-    if (rfid_status == MI_OK) {
-        printf_debug("MRFC522 : carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
-
-        toSend[0] = (uint8_t) ((ARBITRATION_ID_RFID_READ >> 8) & 0x00FF);
-        toSend[1] = (uint8_t) (ARBITRATION_ID_RFID_READ & 0x00FF);
-        for (uint8_t i = 0; i < 6; i++) {
-            toSend[i + 2] = id[i];
+    if (is_card_detected) {
+        if (MFRC522_isCardDetected(&myMFRC522) == false) {
+            is_card_detected = false;
         }
+    } else {
+        if (MFRC522_isCardDetected(&myMFRC522)) {
+            rfid_status = MFRC522_ReadUid(&myMFRC522, id);
+            if (rfid_status == RFID_MFRC522_OK) {
+                is_card_detected = true;
+                USER_LOG("MRFC522 : Carte lue num %02X %02X %02X %02X %02X ", id[0], id[1], id[2], id[3], id[4]);
 
-        if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
-            printf_debug("CAN BUS : Error ==> endless loop in read_rfid \n\r");
-            Error_Handler();
+                toSend[0] = (uint8_t) ((ARBITRATION_ID_RFID_READ >> 8) & 0x00FF);
+                toSend[1] = (uint8_t) (ARBITRATION_ID_RFID_READ & 0x00FF);
+                for (uint8_t i = 0; i < 6; i++) {
+                    toSend[i + 2] = id[i];
+                }
+
+                if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
+                    USER_LOG("CAN BUS : Error ==> endless loop in read_rfid ");
+                    Error_Handler();
+                }
+            }
         }
     }
 }
+
 
 /**
  * Lecture de l'imu et detection de changement d'état
@@ -230,13 +261,13 @@ void read_IMU(void) {
         HAL_StatusTypeDef canbus_status;
         uint8_t toSend[8] = { 0 };
 
-        printf_debug("BNO085  : Changement etat : %d \n\r", state);
+        USER_LOG("BNO085 : State change ==> %d ", state);
         toSend[0] = (uint8_t) ((ARBITRATION_ID_IMU_UPDATE >> 8) & 0x00FF);
         toSend[1] = (uint8_t) (ARBITRATION_ID_IMU_UPDATE & 0x00FF);
         toSend[2] = state;
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
-            printf_debug("CAN BUS : Error ==> endless loop in read_IMU \n\r");
+            USER_LOG("CAN BUS : Error ==> endless loop in read_IMU");
             Error_Handler();
         }
     }
@@ -258,78 +289,77 @@ void read_touch_buttons(void) {
     // --- Fixer couleur par défaut des boutons ---
     LEDS_color_t default_color;
 
-	default_color.red   = 255;   // intensity red
-	default_color.green = 255;     // intensity green
-	default_color.blue  = 255;   // intensity blue
+    default_color.red = 255; // intensity red
+    default_color.green = 255; // intensity green
+    default_color.blue = 255; // intensity blue
 
-	LEDS_color_t home_color;
+    LEDS_color_t home_color;
 
-	home_color.red   = 128;   // intensity red
-	home_color.green = 0;     // intensity green
-	home_color.blue  = 128;   // intensity blue
+    home_color.red = 128; // intensity red
+    home_color.green = 0; // intensity green
+    home_color.blue = 128; // intensity blue
 
-	LEDS_color_t scroll_color;
+    LEDS_color_t scroll_color;
 
-	scroll_color.red   = 255;   // intensity red
-	scroll_color.green = 165;     // intensity green
-	scroll_color.blue  = 0;   // intensity blue
-
+    scroll_color.red = 255; // intensity red
+    scroll_color.green = 165; // intensity green
+    scroll_color.blue = 0; // intensity blue
 
     if (state_button1 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
 
-        	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, home_color);
-        	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, home_color);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
 
             state_button1 = true;
-            state_send= 01;
+            state_send = 01;
             state_changed = true;
-            printf_debug("Touch buttons : button 1 press detected\n\r");
+            USER_LOG("Touch buttons : button 1 press detected ");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == false) {
 
-    	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
-    	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+        TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
+        TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
 
         state_button1 = false;
-        state_send= 00;
+        state_send = 00;
         state_changed = true;
-        printf_debug("Touch buttons : button 1 released\n\r");
+        USER_LOG("Touch buttons : button 1 released");
     }
 
     if (state_button2 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
 
-        	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, scroll_color);
-        	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, scroll_color);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
 
             state_button2 = true;
-            state_send= 02;
+            state_send = 02;
             state_changed = true;
-            printf_debug("Touch buttons : button 2 press detected\n\r");
+            USER_LOG("Touch buttons : button 2 press detected");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == false) {
 
-    	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
-    	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+        TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
+        TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
 
         state_button2 = false;
-        state_send= 00;
+        state_send = 00;
         state_changed = true;
-        printf_debug("Touch buttons : button 2 released\n\r");
+        USER_LOG("Touch buttons : button 2 released\n\r");
     }
     if (state_button3 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == true) {
             state_button3 = true;
             state_send = 03;
             state_changed = true;
-            printf_debug("Touch buttons : button 3 press detected\n\r");
+            USER_LOG("Touch buttons : button 3 press detected");
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == false) {
         state_button3 = false;
-        state_send= 00;
+        state_send = 00;
         state_changed = true;
-        printf_debug("Touch buttons : button 3 released\n\r");
+        USER_LOG("Touch buttons : button 3 released");
     }
 
     if (state_changed) {
@@ -343,7 +373,7 @@ void read_touch_buttons(void) {
         //toSend[4] = (uint8_t) state_button3;
 
         if ((canbus_status = can_bus.send(toSend, 8)) != HAL_OK) {
-            printf_debug("CAN BUS : Error ==> endless loop in touch button \n\r");
+            USER_LOG("CAN BUS : Error ==> endless loop in touch button \n\r");
             Error_Handler();
         }
     }
@@ -520,25 +550,25 @@ void change_leds_strips_J5(void) {
                 leds_strip_J5_tmp_data.clientDataStruct.rgbLedsColor.blue);
         leds_strip_J5.set_brightness(leds_strip_J5_tmp_data.clientDataStruct.rgbLedBrightness);
     }
-
     leds_strip_J5.send();
     leds_strip_J5_change_flag = false;
 }
 
-///**
-// *
-// */
-//void change_leds_strips_J6(void) {
-//    for (int i = 0; i < leds_strip_J6.nb_leds (); i++) {
-//        leds_strip_J6.set_color(i, leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red,
-//                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green,
-//                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue);
-//        leds_strip_J6.set_brightness(leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness);
-//    }
-//
-//    leds_strip_J6.send();
-//    leds_strip_J6_change_flag = false;
-//}
+
+/**
+ *
+ */
+void change_leds_strips_J6(void) {
+    for (int i = 0; i < leds_strip_J6.nb_leds (); i++) {
+        leds_strip_J6.set_color(i, leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.red,
+                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.green,
+                leds_strip_J6_tmp_data.clientDataStruct.rgbLedsColor.blue);
+        leds_strip_J6.set_brightness(leds_strip_J6_tmp_data.clientDataStruct.rgbLedBrightness);
+    }
+    leds_strip_J6.send();
+    leds_strip_J6_change_flag = false;
+}
+
 
 /**
  *
@@ -550,7 +580,6 @@ void change_leds_strips_J7(void) {
                 leds_strip_J7_tmp_data.clientDataStruct.rgbLedsColor.blue);
         leds_strip_J7.set_brightness(leds_strip_J7_tmp_data.clientDataStruct.rgbLedBrightness);
     }
-
     leds_strip_J7.send();
     leds_strip_J7_change_flag = false;
 }
@@ -567,7 +596,7 @@ void start_vibrating_motor(uint8_t dc) {
  *
  */
 void stop_vibrating_motor(void) {
-    HAL_TIM_PWM_Stop (&htim4, TIM_CHANNEL_1);
+    HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_1);
     time_for_stop_vibrating_motor = UINT32_MAX;
 }
 
@@ -585,47 +614,47 @@ uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]) {
  */
 void my_setup(void) {
 
-    tests_unitaires();
-    printf_debug("\n\r--- Application start ! ---\n\r");
+    //tests_unitaires();
+    USER_LOG("---- Application start ! ----");
 
+    // Initialisation du lecteur de carte
     config_SPI_before_RFID();
-    RFID_MFRC522_init();
+    MFRC522_Init(&myMFRC522);
     HAL_Delay(50);
-    RFID_MFRC522_dumpVersionToSerial();
+    MFRC522_dumpVersionToSerial(&myMFRC522);
     HAL_Delay(50);
 
+    // Initialisation de la centrale inertielle
     config_SPI_before_IMU();
     bno08x.setup();
 
+    // Initialisation du bus CAN
     can_bus.begin();
 
-    // --- Fixer couleur par défaut des boutons ---
-	LEDS_color_t default_color;
+    // Initialisation des boutons tactiles
+    LEDS_color_t default_color; // --- Fixer couleur par défaut des boutons ---
 
-	default_color.red   = 255;   // intensité rouge
-	default_color.green = 255;     // intensité verte
-	default_color.blue  = 255;   // intensité bleue
+    default_color.red = 255;       // intensité rouge
+    default_color.green = 255;     // intensité verte
+    default_color.blue = 255;      // intensité bleue
 
-	// Bouton 1
-	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
-	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255); // max
+    // Bouton 1
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);            // max
 
-	// Bouton 2
-	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
-	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+    // Bouton 2
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
 
-	// Bouton 3
-	TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, default_color);
-	TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3, 255);
+    // Bouton 3
+    TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, default_color);
+    TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3, 255);
 
     can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button_1);
-    can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor);
+    can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor); // @todo : a corriger
     can_bus.register_callback_function(ARBITRATION_ID_LEDSTRIP_CONFIG, can_bus_callback_leds_strips);
     can_bus.register_callback_function(ARBITRATION_ID_LED_CONFIG, can_bus_callback_debug_led);
     can_bus.register_callback_function(ARBITRATION_ID_TIME_CONFIG, can_bus_callback_uart_tx);
-
-    printf_debug("\n\r--- Application start main loop ---\n\r");
-
 }
 
 /**
@@ -640,7 +669,9 @@ void my_loop(void) {
     uint32_t time_for_read_touch_buttons = 0;
     uint32_t time_for_change_led_state = 0;
 
-    while (1) {
+    USER_LOG("---- Application start main loop ----");
+
+    while (ENDLESS_LOOP) {
         current_time = HAL_GetTick();
 
         // Lecture état RFID
@@ -661,18 +692,18 @@ void my_loop(void) {
             read_touch_buttons();
         }
 
-        // Données modifiées par le BUS CAN a transmettre
-        if (rgbled_touch_button_1_change_flag == true) {
+        // Données modifiées par le BUS CAN a transmettre au bouton
+        if (rgbled_touch_button_1_change_flag) {
             change_ledRGB_touch_button_1();
         }
 
-        //  Données modifiées par le BUS CAN a transmettre
-        if (rgbled_touch_button_2_change_flag == true) {
+        //  Données modifiées par le BUS CAN a transmettre au bouton
+        if (rgbled_touch_button_2_change_flag) {
             change_ledRGB_touch_button_2();
         }
 
-        //  Données modifiées par le BUS CAN a transmettre
-        if (rgbled_touch_button_3_change_flag == true) {
+        //  Données modifiées par le BUS CAN a transmettre au bouton
+        if (rgbled_touch_button_3_change_flag) {
             change_ledRGB_touch_button_3();
         }
 
@@ -680,9 +711,9 @@ void my_loop(void) {
             change_leds_strips_J5();
         }
 
-        //if (leds_strip_J6_change_flag) {
-        //    change_leds_strips_J6();
-        //}
+        if (leds_strip_J6_change_flag) {
+            change_leds_strips_J6();
+        }
 
         if (leds_strip_J7_change_flag) {
             change_leds_strips_J7();

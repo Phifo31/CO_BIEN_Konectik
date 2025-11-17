@@ -12,9 +12,13 @@
 extern "C" {
 #endif
 
-#define PRINT_DEBUG 1
+//#define PRINT_DEBUG 1
+#define ENABLE_USER_LOG   1
+#define ENABLE_DEBUG_LOG  0
 
-#define PERIODE_LECTURE_RFID 250
+#define ENDLESS_LOOP 1
+
+#define PERIODE_LECTURE_RFID 50
 #define PERIODE_LECTURE_IMU 250
 #define PERIODE_LECTURE_TOUCH_BUTTONS 150
 #define PERIODE_CAN_BUS_AUTOMATIC_MESSAGE 10000
@@ -42,7 +46,6 @@ extern "C" {
 #define LEDS_STRIPS_J6_NB_LEDS 6
 #define LEDS_STRIPS_J7_NB_LEDS 7
 
-
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
@@ -52,12 +55,37 @@ extern FDCAN_HandleTypeDef hfdcan1;
 extern DMA_HandleTypeDef hdma_tim1_ch1;
 extern DMA_HandleTypeDef hdma_tim1_ch3;
 
-void my_setup (void);
-void my_loop (void);
+void my_setup(void);
+void my_loop(void);
+
+
+// Sortie texte
+
+extern uint16_t seconds;
+extern uint16_t reste;
+uint16_t msec2sec(uint32_t n, uint16_t *reste);
+
+#if ENABLE_USER_LOG
+#define USER_LOG(fmt, ...) ({ \
+            seconds = msec2sec(HAL_GetTick(), &reste); \
+            printf("%05u:%03u - ", seconds, reste); \
+            printf("[USER] " fmt "\r\n", ##__VA_ARGS__); })
+#else
+  #define USER_LOG(fmt, ...)
+#endif
+
+#if ENABLE_DEBUG_LOG
+#define DEBUG_LOG(fmt, ...) ({ \
+            seconds = msec2sec(HAL_GetTick(), &reste); \
+            printf("%05u:%03u - ", seconds, reste); \
+            printf("[DEBUG] " fmt "\r\n", ##__VA_ARGS__); })
+#else
+  #define DEBUG_LOG(fmt, ...) UNUSED(fmt)
+#endif
 
 // Pour les tests uniquement
-void config_SPI_before_IMU (void);
-void config_SPI_before_RFID (void);
+void config_SPI_before_IMU(void);
+void config_SPI_before_RFID(void);
 uint16_t can_bus_callback_led(uint16_t sender, uint8_t data[6]);
 uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t data[6]);
 

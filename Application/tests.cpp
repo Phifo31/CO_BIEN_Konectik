@@ -23,18 +23,16 @@
 #include "GPIO_Pin.h"
 #include "myAdafruit_BNO08x.h"
 
+// Liste des objets globaux de l'application
+
 extern Adafruit_BNO08x bno08x;
-
-#define ENDLESS_LOOP 1
-
-//#define MOTION_THRESHOLD  0.01f   // Variation threshold(à ajuster)
-//#define IMMOBILE_TIME_MS 2000    // motionless time before validation (ms)
 
 extern LED_WS2812 leds_strip_J5;
 extern LED_WS2812 leds_strip_J6;
 extern LED_WS2812 leds_strip_J7;
 
 extern CAN_BUS can_bus;
+extern MFRC522_t myMFRC522;
 
 //                         Red, Green, Blue
 LEDS_color_t COLOR_RED = { 0xFF, 0x00, 0x00 };
@@ -46,32 +44,18 @@ LEDS_color_t COLOR_WHITE = { 0xFF, 0xFF, 0xFF };
 FDCAN_TxHeaderTypeDef txHeader;
 FDCAN_RxHeaderTypeDef rxHeader;
 
-uint8_t txData[8];
-uint8_t rxData[8];
+//uint8_t txData[8];
+//uint8_t rxData[8];
 
-uint32_t txMailBox;
+//uint32_t txMailBox;
+
+// Liste des fonctions de l'application utilisées dans les tests
 
 uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
 void start_vibrating_motor(uint8_t dc);
 void stop_vibrating_motor(void);
 
-uint16_t msec2sec(uint32_t n, uint16_t *reste) {
-
-    // Récupéré là mais je ne comprend rien
-    // https://stackoverflow.com/questions/1294885/convert-milliseconds-to-seconds-in-c
-    //  uint32_t q, r, t;
-    //n = n + 500; pourquoi ?
-    //t = (n >> 7) + (n >> 8) + (n >> 12);
-    //q = (n >> 1) + t + (n >> 15) + (t >> 11) + (t >> 14);
-    //q = q >> 9;
-    //r = n - q*1000;
-    //return q + ((r + 24) >> 10);
-
-    // Donc voici ma version
-    uint32_t q = n / 1000;
-    *reste = n - 1000 * q;
-    return (uint16_t) q;
-}
+extern uint32_t time_for_stop_vibrating_motor;
 
 /**
  * Test de la led de la carte nucleo et du print redirigé sur la liaison série et l'USB de la carte Nucleo
@@ -81,8 +65,8 @@ uint16_t msec2sec(uint32_t n, uint16_t *reste) {
 void testDriver_debug_led_state(void) {
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
+    while (ENDLESS_LOOP) {
+        USER_LOG("Test : %d ", i++);
 
         HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
         HAL_Delay(50);
@@ -101,8 +85,8 @@ void testHardware_i2cSlave(void) {
     uint8_t data_off[2] = { DEBUG_LED_STATE, 0x00 };
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
+    while (ENDLESS_LOOP) {
+        USER_LOG("Test : %d ", i++);
 
         if (status) {
             HAL_I2C_Master_Transmit(&hi2c1, TOUCH_BUTTON_ADDRESS_1, data_on, 2, 100);
@@ -121,13 +105,15 @@ void testHardware_i2cSlave(void) {
 
 /**
  * Les leds de la carte STM32 et la led de debug du bouton 1 doivent clignoter
+ *
+ * NB : pour des raisons de fixation mécanique, la led de débug n'est plus cablée
  */
 void test_driver_i2cSlave(void) {
     bool status = false;
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
+    while (ENDLESS_LOOP) {
+        USER_LOG("Test : %d ", i++);
 
         if (status) {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
@@ -151,8 +137,8 @@ void test_driver_i2cSlave(void) {
 void test_driver_touch_button_led_state(void) {
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
+    while (ENDLESS_LOOP) {
+        USER_LOG("Test : %d ", i++);
 
         TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
         HAL_Delay(250);
@@ -184,8 +170,8 @@ void test_driver_touch_button_RGB_LEDS(void) {
     bool status = false;
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
+    while (ENDLESS_LOOP) {
+        USER_LOG("Test : %d ", i++);
 
         if (status) {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
@@ -229,15 +215,13 @@ void test_driver_touch_button_RGB_LEDS(void) {
 void test_driver_scan_touch_button(void) {
     int16_t i = 0;
 
-    while (1) {
-        printf("Test : %d : ", i++);
-
+    while (ENDLESS_LOOP) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-            printf("Push button state : On \n\r");
+            USER_LOG("Test : %d : push button state : On ", i++);
         } else {
             HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-            printf("Push button state : Off \n\r");
+            USER_LOG("Test : %d : push button state : Off", i++);
         }
         HAL_Delay(250);
     }
@@ -260,27 +244,25 @@ void test_driver_touch_button_and_RGB_leds(void) {
     TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 100);
     TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
 
-    while (1) {
-        printf("Test : %d \n\r", i++);
-
+    while (ENDLESS_LOOP) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, ON);
             TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_RED);
-            printf("Push button n°1 state : On \n\r");
+            USER_LOG("Test : %d : push button n°1 state : On ", i);
         } else {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_1, OFF);
             TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, COLOR_BLUE);
-            printf("Push button n°1 state : Off \n\r");
+            USER_LOG("Test : %d : push button n°1 state : Off", i);
         }
 
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, ON);
             TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_RED);
-            printf("Push button n°2 state : On \n\r");
+            USER_LOG("Test : %d : push button n°2 state : On ", i++);
         } else {
             TOUCH_BUTTON_debug_led_set_state(TOUCH_BUTTON_ADDRESS_2, OFF);
             TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, COLOR_BLUE);
-            printf("Push button n°2 state : Off \n\r");
+            USER_LOG("Test : %d : push button n°2 state : Off", i++);
         }
         HAL_Delay(250);
     }
@@ -301,7 +283,7 @@ void test_integration_one_touch_button_and_RGB_leds(void) {
 
     printf("\n\rTest un bouton tactile et leds RGB - version 1.0 : 22/10/2025\r\n");
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
             uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
             seconds = msec2sec(HAL_GetTick(), &reste);
@@ -372,7 +354,7 @@ void test_integration_two_touch_buttons_and_RGB_leds(void) {
 
     printf("\n\nTest boutons tactiles et leds - version 1.0 : 23/09/2025\r\n");
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
             uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
             seconds = msec2sec(HAL_GetTick(), &reste);
@@ -436,7 +418,6 @@ void test_integration_two_touch_buttons_and_RGB_leds(void) {
             seconds = msec2sec(HAL_GetTick(), &reste);
             printf("%05u:%03u - button 2 = released\r\n", seconds, reste);
         }
-
         HAL_Delay(250);
     }
 }
@@ -468,7 +449,7 @@ void test_integration_three_touch_buttons_and_RGB_leds(void) {
 
     printf("\n\nTest boutons tactiles et leds - version 1.0 : 23/09/2025\r\n");
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         if ((huart2.Instance->ISR & USART_ISR_RXNE_RXFNE) != 0) {
             uint8_t receive_char = (uint8_t) (huart2.Instance->RDR);    // & (uint8_t) huart2.Mask);
             seconds = msec2sec(HAL_GetTick(), &reste);
@@ -574,7 +555,7 @@ void test_unitaires_strip_leds(void) {
 
     HAL_TIM_Base_Start(&htim1);
 
-    while (1) {
+    while (ENDLESS_LOOP) {
 
         for (int i = 0; i < 46; i++) {
             leds_strip_J5.set_brightness(i);
@@ -591,16 +572,14 @@ void test_unitaires_strip_leds(void) {
 }
 
 /**
+ *
  * Test de deux canaux seulement, la première Konnectik n'est pas complètement fonctionnelle sur le cannal J6
+ *
+ * Correction effectuée - schéma complètement fonctionnel
+ *
+ *
  */
 void test_driver_strips_leds(void) {
-
-    //while (ENDLESS_LOOP) {
-    //HAL_GPIO_TogglePin(debug_GPIO_Port, debug_Pin);
-    //HAL_Delay(50);
-    //}
-
-
 
     for (int i = 0; i < leds_strip_J5.nb_leds(); i++) {
         leds_strip_J5.set_color(i, 102, 0, 235);
@@ -621,7 +600,6 @@ void test_driver_strips_leds(void) {
     leds_strip_J7.send();
 
     while (ENDLESS_LOOP) {
-
         for (int i = 0; i < 46; i++) {
             leds_strip_J5.set_brightness(i);
             leds_strip_J6.set_brightness(i);
@@ -650,29 +628,28 @@ void test_driver_strips_leds(void) {
 void testIMU_connection_and_detection(void) {
     sh2_SensorValue_t sensorValue;
 
-    printf("%cBNO08x test \n\r", 0x0C); // form feed + texte
+    USER_LOG("---- BNO08x starting test ---- "); // form feed + texte
+
     // Try to initialize!
     if (!bno08x.begin_SPI()) {
-        // if (!bno08x.begin_UART(&Serial1)) {  // Requires a device with > 300 byte
-        // UART buffer! if (!bno08x.begin_SPI(BNO08X_CS, BNO08X_INT)) {
-        printf("Test IMU : Failed to find BNO08x chip ! \n\r");
+        DEBUG_LOG("Test IMU : Failed to find BNO08x chip ! ");
         while (1) {
             HAL_Delay(10);
         }
     }
-    printf("BNO08x Found ! \n\r");
+    USER_LOG("BNO08x Found ! ");
 
     for (int n = 0; n < bno08x.prodIds.numEntries; n++) {
-        printf("Part %lu ", bno08x.prodIds.entry[n].swPartNumber);
-        printf(": Version : %d.%d.%d \n\r", bno08x.prodIds.entry[n].swVersionMajor,
-                bno08x.prodIds.entry[n].swVersionMinor, bno08x.prodIds.entry[n].swVersionPatch);
-        printf(" Build %lu \n\r", bno08x.prodIds.entry[n].swBuildNumber);
+        DEBUG_LOG("Part %lu : Version : %d.%d.%d ", bno08x.prodIds.entry[n].swPartNumber,
+                bno08x.prodIds.entry[n].swVersionMajor, bno08x.prodIds.entry[n].swVersionMinor,
+                bno08x.prodIds.entry[n].swVersionPatch);
+        DEBUG_LOG("Build %lu ", bno08x.prodIds.entry[n].swBuildNumber);
     }
 
     // Here is where you define the sensor outputs you want to receive
-    printf("Setting desired reports \n\r");
+    DEBUG_LOG("Setting desired reports ");
     if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR)) {
-        printf("Could not enable game vector\n\r");
+        DEBUG_LOG("Could not enable game vector");
     }
 
     sh2_Quaternion lastQuat = { 0 };
@@ -680,7 +657,7 @@ void testIMU_connection_and_detection(void) {
     uint32_t lastMotionTime = HAL_GetTick();
     bool isImmobile = false;
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         if (bno08x.getSensorEvent(&sensorValue)) {
             if (sensorValue.sensorId == SH2_GAME_ROTATION_VECTOR) {
                 sh2_Quaternion q;
@@ -689,27 +666,28 @@ void testIMU_connection_and_detection(void) {
                 q.z = sensorValue.un.gameRotationVector.k;
                 q.w = sensorValue.un.gameRotationVector.real;
 
-                if (!firstRead) {
+                if (firstRead) {
+                    firstRead = false;
+                    lastMotionTime = HAL_GetTick();
+                } else {
                     float diff = quaternionDiff(q, lastQuat);
-
                     if (diff > IMU_MOTION_THRESHOLD) {
                         lastMotionTime = HAL_GetTick();
                         if (isImmobile) {
-                            printf("Mouvement détecté !\n\r");
+                            USER_LOG("Movement detected !");
                             isImmobile = false;
                         }
                     } else {
-                        if (!isImmobile && (HAL_GetTick() - lastMotionTime > IMU_IMMOBILE_TIME_MS)) {
+                        if (!isImmobile && ((HAL_GetTick() - lastMotionTime) > IMU_IMMOBILE_TIME_MS)) {
                             isImmobile = true;
-                            printf("Immobile depuis %u ms\n\r", IMU_IMMOBILE_TIME_MS);
+                            USER_LOG("No move since %u ms ", IMU_IMMOBILE_TIME_MS);
                         }
                     }
-                } else {
-                    firstRead = false;
-                    lastMotionTime = HAL_GetTick();
                 }
-
-                lastQuat = q;
+                lastQuat.x = q.x;
+                lastQuat.y = q.y;
+                lastQuat.z = q.z;
+                lastQuat.w = q.w;
             }
         }
         HAL_Delay(250);
@@ -720,39 +698,40 @@ void testIMU_connection_and_detection(void) {
  * Test des modules RFID
  *
  * Réalisé en mai 2025
- * Repris en octobre 2025 avec konectik v1.0
+ * Repris en octobre 2025 avec konectik v1.0 et nouvelle carte RFID (attention au brochage)
  *
  */
-void test_RFID_connection(void) {
+void test_RFID_connection_and_detection(void) {
     RFID_MFRC522_Status_t status;
 
-    printf("\n\r--- MRFC 522 test ---\n\r");
+    USER_LOG("---- MRFC 522 test ----");
     // Try to initialize! _MFRC522_Reset(); // inutile, le init fait le reset
     config_SPI_before_RFID();
     //config_SPI_before_IMU();
 
     //while (1) {
-    RFID_MFRC522_init();
+    MFRC522_Init(&myMFRC522);
     HAL_Delay(50);
     //}
 
-    RFID_MFRC522_dumpVersionToSerial();
+    MFRC522_dumpVersionToSerial(&myMFRC522);
     HAL_Delay(50);
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         uint8_t id[10];
-        uint8_t type[10];
-
-        status = RFID_MFRC522_check(id, type);
-        if (status == MI_OK) {
-            printf("MRFC522 : Carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
+        if (MFRC522_isCardDetected(&myMFRC522)) {
+            status = MFRC522_ReadUid(&myMFRC522, id);
+            if (status == RFID_MFRC522_OK) {
+                USER_LOG("MRFC522 - Card UID : %02X %02X %02X %02X %02X", id[0], id[1], id[2], id[3], id[4]);
+            }
         }
-        HAL_Delay(250);
+        HAL_Delay(50);
     }
 }
 
 /**
- *
+ * Ce test utilise les deux périphériques reliés au bus SPI
+ *      ==> il faut reconfigurer le bus SPI à chaque changement de périphérique
  */
 void test_IMU_and_RFID_communication(void) {
     RFID_MFRC522_Status_t status;
@@ -761,9 +740,9 @@ void test_IMU_and_RFID_communication(void) {
     printf("MRFC 522 test \n\r");
     // Try to initialize! _MFRC522_Reset(); // inutile, le init fait le reset
     config_SPI_before_RFID();
-    RFID_MFRC522_init();
+    MFRC522_Init(&myMFRC522);
     HAL_Delay(50);
-    RFID_MFRC522_dumpVersionToSerial();
+    MFRC522_dumpVersionToSerial(&myMFRC522);
     HAL_Delay(50);
 
     printf("%cBNO08x test \n\r", 0x0C); // form feed + texte
@@ -795,16 +774,23 @@ void test_IMU_and_RFID_communication(void) {
     uint32_t lastMotionTime = HAL_GetTick();
     bool isImmobile = false;
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         //Reading RFID
         uint8_t id[10];
-        uint8_t type[10];
+        //uint8_t type[10];
 
         config_SPI_before_RFID();
-        status = RFID_MFRC522_check(id, type);
-        if (status == MI_OK) {
-            printf("MRFC522 : Carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
+        if (MFRC522_isCardDetected(&myMFRC522)) {
+            status = MFRC522_ReadUid(&myMFRC522, id);
+            if (status == RFID_MFRC522_OK) {
+                printf("MRFC522 : Carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
+            }
         }
+
+        //status = RFID_MFRC522_check(id, type);
+        //if (status == MI_OK) {
+        //    printf("MRFC522 : Carte lue num %02X %02X %02X %02X %02X \n\r", id[0], id[1], id[2], id[3], id[4]);
+        //}
 
         //Reading IMU
         config_SPI_before_IMU();
@@ -835,27 +821,16 @@ void test_IMU_and_RFID_communication(void) {
                     firstRead = false;
                     lastMotionTime = HAL_GetTick();
                 }
-
-                lastQuat = q;
+                lastQuat.x = q.x;
+                lastQuat.y = q.y;
+                lastQuat.z = q.z;
+                lastQuat.w = q.w;
             }
         }
-
         HAL_Delay(250);
     }
 }
 
-/**
- *
- */
-// Tests CAN BUS
-//void HAL_GPIO_EXTI_Callback (uint16_t gpio_pin) {
-//    if (gpio_pin == GPIO_PIN_??) {
-//        txData [0] = 100; // ms delay
-//        txData [1] = 10;  // nb loop
-//
-//        HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, &txData);
-//    }
-//}
 /**
  *
  */
@@ -867,7 +842,7 @@ void test_CAN_BUS_send_only(void) {
     toSend[1] = 0x34;
 
     uint8_t count = 0;
-    while (1) {
+    while (ENDLESS_LOOP) {
         toSend[4] = toSend[3] = toSend[2] = count++;
         can_bus.send(toSend, 5);
         HAL_Delay(500);
@@ -888,21 +863,18 @@ void test_CAN_BUS_send_receive(void) {
     can_bus.register_callback_function((arbitrationId_t) 0x5678, can_bus_callback_uart_tx);
 
     uint8_t count = 0;
-    while (1) {
-        printf("count = %d \n\r", count);
+    while (ENDLESS_LOOP) {
+        USER_LOG("count = %d ", count);
         toSend[4] = toSend[3] = toSend[2] = count++;
         can_bus.send(toSend, 5);
         HAL_Delay(2500);
     }
 }
 
-
 /**
  *
  */
-extern uint32_t time_for_stop_vibrating_motor;
-void test_driver_moteur_vibrant (void)
-{
+void test_driver_moteur_vibrant(void) {
     uint8_t data[6];
 
     HAL_TIM_Base_Init(&htim4);
@@ -914,15 +886,15 @@ void test_driver_moteur_vibrant (void)
         HAL_Delay(1900);
     }
 
-
     //uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
 
-    while (1) {
+    while (ENDLESS_LOOP) {
         data[0] = 10; // durée
         data[1] = 77; // rapport cyclique
 
-        can_bus_callback_vibrating_motor (0xffff, data);
-        while (HAL_GetTick() <= time_for_stop_vibrating_motor);
+        can_bus_callback_vibrating_motor(0xffff, data);
+        while (HAL_GetTick() <= time_for_stop_vibrating_motor)
+            ;
         stop_vibrating_motor();
         HAL_Delay(2000);
     }
@@ -943,18 +915,20 @@ void tests_unitaires(void) {
     // test_unitaires_strip_leds();
     //test_driver_strips_leds ();
 
+    //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
     //testIMU_connection_and_detection();
-    test_RFID_connection();
+    test_RFID_connection_and_detection();
     //test_IMU_and_RFID_communication();
 
     //test_CAN_BUS_send_only();
     //test_CAN_BUS_send_receive ();
 
-    //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
     //test_integration_one_touch_button_and_RGB_leds();
     //test_integration_two_touch_buttons_and_RGB_leds();
     //test_integration_three_touch_buttons_and_RGB_leds ();
 
     //test_driver_moteur_vibrant ();
 }
+
+// End of file
 
