@@ -20,7 +20,7 @@ b) la bibliothèque permettant le dialogue avec l'IMU BNO085
 1) Enlever les straps 0 ohms notés SB2 & SB3
     PQ ?
     PB7 et PA15 court-circuités avec PA5 et PA6 pour assurer la compatibilité avec Arduino,
-    Inutile pour nous, et posent problème pour le lecteur RFID
+    Inutile pour nous, et posent problèmes pour le lecteur RFID
     
 2) Poser le strap 0 ohms noté SB8 (il n'y a que "8" de sérigaphié)
     PQ ?

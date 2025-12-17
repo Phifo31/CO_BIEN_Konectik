@@ -112,7 +112,7 @@ HAL_StatusTypeDef CAN_BUS::register_callback_function(arbitrationId_t filtre, ui
 }
 
 /**
- * fonction du driver HAL appelée par l'interruption de réception
+ * Fonction du driver HAL appelée par l'interruption de réception
  *
  * Elle parcours la table des pointeurs de fonction afin de repérer l'ident et appeler la fonction correspondante
  */

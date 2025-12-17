@@ -51,7 +51,26 @@ void TOUCH_BUTTON_RGB_leds_set_intensity(uint8_t address, uint8_t intensity) {
     uint8_t data[2] = { RGB_LED_INTENSITY, 0x00 };
 
     data[1] = intensity;
-    HAL_I2C_Master_Transmit(&hi2c1, address, data, 2, 100);
+    HAL_I2C_Master_Transmit(&hi2c1, address, data, 2, MY_I2C_TIMEOUT);
+}
+
+/**
+ *
+ */
+void TOUCH_BUTTON_RGB_leds_set_shape (uint8_t address, uint8_t shape) {
+    uint8_t data[2] = { RGB_LED_SHAPE, 0x00 };
+
+    data[1] = shape;
+    HAL_I2C_Master_Transmit(&hi2c1, address, data, 2, MY_I2C_TIMEOUT);
+}
+
+
+/**
+ *
+ */
+void TOUCH_BUTTON_RGB_leds_set_RGB(uint8_t address, uint8_t* data, uint8_t len) {
+
+    HAL_I2C_Master_Transmit(&hi2c1, address, data, len, MY_I2C_TIMEOUT);
 }
 
 /**

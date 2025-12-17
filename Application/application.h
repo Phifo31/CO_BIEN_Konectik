@@ -84,10 +84,7 @@ uint16_t msec2sec(uint32_t n, uint16_t *reste);
 #endif
 
 // Pour les tests uniquement
-void config_SPI_before_IMU(void);
-void config_SPI_before_RFID(void);
-uint16_t can_bus_callback_led(uint16_t sender, uint8_t data[6]);
-uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t data[6]);
+
 
 #ifdef __cplusplus
 }

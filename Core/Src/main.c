@@ -467,7 +467,7 @@ static void MX_USART2_UART_Init(void)
   huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart2.Init.ClockPrescaler = UART_PRESCALER_DIV1;
   huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
+  if (HAL_HalfDuplex_Init(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -544,6 +544,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(IMU_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA3_SRP_Pin */
+  GPIO_InitStruct.Pin = PA3_SRP_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(PA3_SRP_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : RFID_SS_Pin IMU_RST_Pin */
   GPIO_InitStruct.Pin = RFID_SS_Pin|IMU_RST_Pin;

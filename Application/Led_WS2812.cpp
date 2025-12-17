@@ -22,7 +22,7 @@
 /*
  * table de données à transmettre - utilisé par le DMA du PWM
  */
-static uint16_t pwm_data[(24 * MAX_LED) + 50];
+static uint16_t pwm_data[(24 * MAX_LED) + 60];
 
 /**
  *
@@ -80,7 +80,13 @@ void LED_WS2812::send(void) {
     if (datasentflag_ == false)
         return;
 
-    for (int i = 0; i < MAX_LED; i++) {
+    // release link before real value
+    for (int i = 0; i < 50; i++) {
+        pwm_data[indx++] = 0;
+    }
+
+
+    for (int i = 0; i < nb_leds_; i++) {
 #if USE_BRIGHTNESS
         color = ((LED_mod_[i][1] << 16) | (LED_mod_[i][2] << 8) | (LED_mod_[i][3]));
 #else
@@ -89,32 +95,28 @@ void LED_WS2812::send(void) {
 
         for (int i = 23; i >= 0; i--) {
             if (color & (1 << i)) {
-                pwm_data[indx] = WS2812_PWM_DATA_ONE;
-            }
-
-            else
-                pwm_data[indx] = WS2812_PWM_DATA_ZERO;
-            indx++;
+                pwm_data[indx++] = WS2812_PWM_DATA_ONE;
+            } else
+                pwm_data[indx++] = WS2812_PWM_DATA_ZERO;
         }
     }
 
-    // release link
+    // release link between two leds
     for (int i = 0; i < 50; i++) {
-        pwm_data[indx] = 0;
-        indx++;
+        pwm_data[indx++] = 0;
     }
 
     switch (timer_channel_) {
     case TIM_CHANNEL_1 :
-        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t*) pwm_data, indx);
+        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_1, (uint32_t*) pwm_data, indx-1);
         break;
 
     case TIM_CHANNEL_2 :
-        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_2, (uint32_t*) pwm_data, indx);
+        HAL_TIM_PWM_Start_DMA(&htim1, TIM_CHANNEL_2, (uint32_t*) pwm_data, indx-1);
         break;
 
     case TIM_CHANNEL_3 :
-        HAL_TIMEx_PWMN_Start_DMA(&htim1, TIM_CHANNEL_3, (uint32_t*) pwm_data, indx);
+        HAL_TIMEx_PWMN_Start_DMA(&htim1, TIM_CHANNEL_3, (uint32_t*) pwm_data, indx-1);
         break;
 
     default :

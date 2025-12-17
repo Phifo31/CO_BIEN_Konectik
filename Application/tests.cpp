@@ -44,18 +44,35 @@ LEDS_color_t COLOR_WHITE = { 0xFF, 0xFF, 0xFF };
 FDCAN_TxHeaderTypeDef txHeader;
 FDCAN_RxHeaderTypeDef rxHeader;
 
-//uint8_t txData[8];
-//uint8_t rxData[8];
+void config_SPI_before_IMU(void);
+void config_SPI_before_RFID(void);
 
-//uint32_t txMailBox;
+extern bool leds_strip_J5_change_flag;
+extern bool leds_strip_J6_change_flag;
+extern bool leds_strip_J7_change_flag;
+extern bool rgbled_touch_button_1_change_flag;
+extern bool rgbled_touch_button_2_change_flag;
+extern bool rgbled_touch_button_3_change_flag;
+extern uint32_t time_for_stop_vibrating_motor;
 
 // Liste des fonctions de l'application utilisées dans les tests
-
+uint16_t can_bus_callback_led(uint16_t sender, uint8_t data[6]);
+uint16_t can_bus_callback_leds_strips(uint16_t sender, uint8_t data[6]);
+uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t data[6]);
 uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
+uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]);
 void start_vibrating_motor(uint8_t dc);
 void stop_vibrating_motor(void);
-
-extern uint32_t time_for_stop_vibrating_motor;
+uint8_t read_RFID(void);
+void read_IMU(void);
+void read_touch_buttons(void);
+void change_ledRGB_touch_button_1(void);
+void change_ledRGB_touch_button_2(void);
+void change_ledRGB_touch_button_3(void);
+uint32_t change_state_user_led(void);
+void change_leds_strips_J5(void);
+void change_leds_strips_J6(void);
+void change_leds_strips_J7(void);
 
 /**
  * Test de la led de la carte nucleo et du print redirigé sur la liaison série et l'USB de la carte Nucleo
@@ -890,13 +907,225 @@ void test_driver_moteur_vibrant(void) {
 
     while (ENDLESS_LOOP) {
         data[0] = 10; // durée
-        data[1] = 77; // rapport cyclique
+        data[1] = 40; // rapport cyclique
 
         can_bus_callback_vibrating_motor(0xffff, data);
         while (HAL_GetTick() <= time_for_stop_vibrating_motor)
             ;
         stop_vibrating_motor();
         HAL_Delay(2000);
+    }
+}
+
+/*
+ *
+ */
+void test_complet_3_12_2025(void) {
+    uint8_t data[6];
+
+    uint32_t current_time = 0;
+    uint32_t time_for_RFID = 0;
+    uint32_t time_for_IMU = 0;
+    uint32_t time_for_can_bus_automatic_message = 0;
+    uint32_t time_for_read_touch_buttons = 0;
+    uint32_t time_for_change_led_state = 0;
+    uint32_t time_for_vibrating_motor = 1000;
+    uint32_t time_for_change_led_strip = 1000;
+    uint8_t cmpt_led_strip = 0;
+
+    USER_LOG("---- Test application start main loop ----");
+    while (ENDLESS_LOOP) {
+        current_time = HAL_GetTick();
+
+        // Lecture état RFID
+        if (current_time >= time_for_RFID) {
+            time_for_RFID += PERIODE_LECTURE_RFID;
+            uint8_t tmp = read_RFID();
+            if (tmp == 0x69) {
+                data[0] = 4; // num binaire bandeau
+                data[1] = 21; // red
+                data[2] = 21; // green
+                data[3] = 0; // blue
+                data[4] = 21; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+
+                data[0] = 0x3; // num button
+                data[1] = 0x24; // mode + shape
+                data[2] = 21; // red
+                data[3] = 0; // green
+                data[4] = 21; // blue
+                data[5] = 255; // brightnes
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+            } else if (tmp == 0xC7) {
+                data[0] = 4; // num binaire bandeau
+                data[1] = 0; // red
+                data[2] = 41; // green
+                data[3] = 42; // blue
+                data[4] = 43; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+
+                data[0] = 0x3; // num button
+                data[1] = 0x24; // mode + shape
+                data[2] = 21; // red
+                data[3] = 0; // green
+                data[4] = 21; // blue
+                data[5] = 255; // brightnes
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+
+            } else if (tmp == 0xd4) {
+                data[0] = 4; // num binaire bandeau
+                data[1] = 51; // red
+                data[2] = 51; // green
+                data[3] = 0; // blue
+                data[4] = 53; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+            } else if (tmp == 0xEE) {
+                data[0] = 4; // num binaire bandeau
+                data[1] = 68; // red
+                data[2] = 69; // green
+                data[3] = 100; // blue
+                data[4] = 255; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+            } else if (tmp == 0xA7) {
+                data[0] = 4; // num binaire bandeau
+                data[1] = 100; // red
+                data[2] = 20; // green
+                data[3] = 21; // blue
+                data[4] = 55; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+
+                data[0] = 0x03; // num button
+                data[1] = 0x30; // mode + shape
+                data[2] = 100; // red
+                data[3] = 20; // green
+                data[4] = 21; // blue
+                data[5] = 255; // brightness
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+            }
+        }
+
+        // Lecture état IMU
+        if (current_time >= time_for_IMU) {
+            time_for_IMU += PERIODE_LECTURE_IMU;
+            read_IMU();
+        }
+
+        // Lecture état boutons tactiles
+        if (current_time >= time_for_read_touch_buttons) {
+            time_for_read_touch_buttons += PERIODE_LECTURE_TOUCH_BUTTONS;
+            read_touch_buttons();
+        }
+
+        if (current_time >= time_for_change_led_strip) {
+            time_for_change_led_strip += 1000;
+            if ((++cmpt_led_strip & 0x07) == 7) {
+                data[0] = 1; // num binaire bandeau
+                data[1] = 100; // red
+                data[2] = 10; // green
+                data[3] = 21; // blue
+                data[4] = 30; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+
+                data[0] = 0x03; // num button
+                data[1] = 0x40; // shape + mode
+                data[2] = 100; // red
+                data[3] = 10; // green
+                data[4] = 21; // blue
+                data[5] = 50; // brightness
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+            } else if ((cmpt_led_strip & 0x07) == 5) {
+                data[0] = 3; // num binaire bandeau
+                data[1] = 2; // red
+                data[2] = 2; // green
+                data[3] = 88; // blue
+                data[4] = 99; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+                data[0] = 3; // num button
+                data[1] = 0x30; // shape + mode
+                data[2] = 2; // red
+                data[3] = 2; // green
+                data[4] = 88; // blue
+                data[5] = 100; // brightness
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+            } else if ((cmpt_led_strip & 0x07) == 3) {
+                data[0] = 7; // num binaire bandeau
+                data[1] = 20; // red
+                data[2] = 100; // green
+                data[3] = 20; // blue
+                data[4] = 20; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+                data[0] = 3; // num button
+                data[1] = 0x20; // shape + mode
+                data[2] = 20; // red
+                data[3] = 100; // green
+                data[4] = 20; // blue
+                data[5] = 150; // brightness
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+            } else if ((cmpt_led_strip & 0x07) == 1) {
+                data[0] = 7; // num binaire bandeau
+                data[1] = 10; // red
+                data[2] = 10; // green
+                data[3] = 10; // blue
+                data[4] = 99; // brightness
+                can_bus_callback_leds_strips(0xffff, data);
+                data[0] = 3; // num button
+                data[1] = 0x10; // shape + mode
+                data[2] = 10; // red
+                data[3] = 10; // green
+                data[4] = 10; // blue
+                data[5] = 200; // brightness
+                can_bus_callback_ledRGB_touch_button(0xffff, data);
+
+            }
+        }
+
+        if (rgbled_touch_button_1_change_flag) {
+            change_ledRGB_touch_button_1();
+        }
+
+        if (rgbled_touch_button_2_change_flag) {
+            change_ledRGB_touch_button_2();
+        }
+
+        if (leds_strip_J5_change_flag) {
+            change_leds_strips_J5();
+        }
+        if (leds_strip_J6_change_flag) {
+            change_leds_strips_J6();
+        }
+        if (leds_strip_J7_change_flag) {
+            change_leds_strips_J7();
+        }
+
+
+        // Test moteur vibrant
+        if (current_time >= time_for_vibrating_motor) {
+            data[0] = 11; // durée
+            data[1] = 33; // rapport cyclique
+            can_bus_callback_vibrating_motor(0xffff, data);
+            time_for_vibrating_motor += 5000;
+        }
+
+        if (current_time >= time_for_stop_vibrating_motor) {
+            stop_vibrating_motor();
+        }
+
+        // Ecriture message CAN de vie (pour vérifier que le can fonctionne)
+        if (current_time >= time_for_can_bus_automatic_message) {
+            uint8_t toSend[8] = { 0xC0, 0x1D, 0xC0, 0xFF, 0xEE, 0xBA, 0xDB, 0xAD };
+            can_bus.send(toSend, 8);
+            time_for_can_bus_automatic_message += PERIODE_CAN_BUS_AUTOMATIC_MESSAGE;
+        }
+
+        // Modification état led debug (pour vérifier que l'application fonctionne)
+        if (current_time >= time_for_change_led_state) {
+            time_for_change_led_state += change_state_user_led();
+        }
     }
 }
 
@@ -917,7 +1146,7 @@ void tests_unitaires(void) {
 
     //Attention bien penser a changer de mode SPI pour les 2 interfaces IMU et RFID
     //testIMU_connection_and_detection();
-    test_RFID_connection_and_detection();
+    //test_RFID_connection_and_detection();
     //test_IMU_and_RFID_communication();
 
     //test_CAN_BUS_send_only();
@@ -927,7 +1156,14 @@ void tests_unitaires(void) {
     //test_integration_two_touch_buttons_and_RGB_leds();
     //test_integration_three_touch_buttons_and_RGB_leds ();
 
-    //test_driver_moteur_vibrant ();
+    test_driver_moteur_vibrant();
+}
+
+/**
+ *:
+ */
+void test_integration(void) {
+    test_complet_3_12_2025();
 }
 
 // End of file

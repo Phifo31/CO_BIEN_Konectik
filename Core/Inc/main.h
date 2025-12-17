@@ -61,10 +61,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define IMU_CS_Pin GPIO_PIN_1
 #define IMU_CS_GPIO_Port GPIOF
-#define USART2_TX_Pin GPIO_PIN_2
-#define USART2_TX_GPIO_Port GPIOA
-#define USART2_RX_Pin GPIO_PIN_3
-#define USART2_RX_GPIO_Port GPIOA
+#define PA3_SRP_Pin GPIO_PIN_3
+#define PA3_SRP_GPIO_Port GPIOA
 #define RFID_SS_Pin GPIO_PIN_4
 #define RFID_SS_GPIO_Port GPIOA
 #define IMU_IRQ_Pin GPIO_PIN_0
