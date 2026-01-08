@@ -45,7 +45,6 @@ extern "C" {
 //#include <Adafruit_Sensor.h>
 //#include <Wire.h>
 
-#include "GPIO_Pin.h"
 
 #define BNO08x_I2CADDR_DEFAULT 0x4A ///< The default I2C address
 
@@ -59,7 +58,7 @@ extern "C" {
  */
 class Adafruit_BNO08x {
 public:
-  Adafruit_BNO08x(SPI_HandleTypeDef * hspi, GPIO_Pin reset_pin, GPIO_Pin cs_pin, GPIO_Pin irq_pin);
+  Adafruit_BNO08x(SPI_HandleTypeDef * hspi, const GPIO_Pin& reset_pin, const GPIO_Pin& cs_pin, const GPIO_Pin& irq_pin);
   ~Adafruit_BNO08x();
 
 //  bool begin_I2C(uint8_t i2c_addr = BNO08x_I2CADDR_DEFAULT,
@@ -76,12 +75,40 @@ public:
 
   sh2_ProductIds_t prodIds; ///< The product IDs returned by the sensor
 
+  void setup (void);
+
+  void setpin_CS (void);
+  void resetpin_CS (void);
+  GPIO_PinState readpin_IRQ (void);
+
+  void hal_hardwareReset(void);
+
 protected:
   virtual bool _init(int32_t sensor_id);
 
-  sh2_Hal_t
-      _HAL; ///< The struct representing the SH2 Hardware Abstraction Layer
+
+  //bool spihal_wait_for_int(void);
+  //int spihal_open(sh2_Hal_t *self);
+  //void spihal_close(sh2_Hal_t *self);
+  //int spihal_read(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len, uint32_t *t_us);
+  //int spihal_write(sh2_Hal_t *self, uint8_t *pBuffer, unsigned len);
+
+  sh2_Hal_t _HAL; ///< The struct representing the SH2 Hardware Abstraction Layer
+
+  GPIO_Pin reset_pin_;//(NULL, -1);
+  GPIO_Pin cs_pin_;//(NULL, -1);
+  GPIO_Pin irq_pin_;//(NULL, -1);
+  SPI_HandleTypeDef *hspi_;// = NULL;
+
 };
+
+
+typedef enum {
+    NO_CHANGE, MOVEMENT_DETECTED, IMMOBILE_DETECTED
+} imu_state_t;
+
+float quaternionDiff(sh2_Quaternion q1, sh2_Quaternion q2);
+imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values);
 
 
 #endif /* MYADAFRUIT_BNO08X_H_ */

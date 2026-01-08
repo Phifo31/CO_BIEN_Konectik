@@ -12,8 +12,8 @@
 
 typedef struct
 {
-    uint16_t ident;
-    uint16_t (* function_pointer) (uint16_t sender, uint8_t len, uint8_t data [5]);
+    arbitrationId_t ident;
+    uint16_t (* function_pointer) (uint16_t sender, uint8_t data [6]);
 } callback_function_t;
 
 
@@ -24,21 +24,15 @@ typedef struct
 class CAN_BUS {
 public:
   CAN_BUS (uint16_t ident);
-
   void begin (void);
   HAL_StatusTypeDef send (uint8_t * buffer,  uint8_t len);
-
-  HAL_StatusTypeDef register_callback_function (uint16_t filtre, uint16_t (*fp)(uint16_t, uint8_t, uint8_t*));
-
+  HAL_StatusTypeDef register_callback_function (arbitrationId_t filtre, uint16_t (*fp)(uint16_t, uint8_t*));
 
 private:
 
   uint16_t id_;
-
   FDCAN_TxHeaderTypeDef txHeader_;
-
   uint8_t txData_[12];
-
 };
 
 

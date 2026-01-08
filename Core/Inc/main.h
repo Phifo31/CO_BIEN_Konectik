@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -57,16 +59,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define USART2_TX_Pin GPIO_PIN_2
-#define USART2_TX_GPIO_Port GPIOA
-#define USART2_RX_Pin GPIO_PIN_3
-#define USART2_RX_GPIO_Port GPIOA
+#define IMU_CS_Pin GPIO_PIN_1
+#define IMU_CS_GPIO_Port GPIOF
+#define PA3_SRP_Pin GPIO_PIN_3
+#define PA3_SRP_GPIO_Port GPIOA
 #define RFID_SS_Pin GPIO_PIN_4
 #define RFID_SS_GPIO_Port GPIOA
 #define IMU_IRQ_Pin GPIO_PIN_0
 #define IMU_IRQ_GPIO_Port GPIOB
-#define IMU_CS_Pin GPIO_PIN_9
-#define IMU_CS_GPIO_Port GPIOA
 #define IMU_RST_Pin GPIO_PIN_10
 #define IMU_RST_GPIO_Port GPIOA
 #define T_SWDIO_Pin GPIO_PIN_13
@@ -79,15 +79,15 @@ void Error_Handler(void);
 #define RFID_IRQ_GPIO_Port GPIOB
 #define RFID_RST_Pin GPIO_PIN_5
 #define RFID_RST_GPIO_Port GPIOB
+#define CMD_VIB_Pin GPIO_PIN_6
+#define CMD_VIB_GPIO_Port GPIOB
 #define LD2_Pin GPIO_PIN_8
 #define LD2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
-extern I2C_HandleTypeDef hi2c1;
-extern SPI_HandleTypeDef hspi1;
-extern UART_HandleTypeDef huart2;
-extern FDCAN_HandleTypeDef hfdcan1;
+
+
 
 /* USER CODE END Private defines */
 
