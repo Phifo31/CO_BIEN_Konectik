@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "main.h"
 #include "../../Common/common_data.h"
@@ -20,8 +21,16 @@
 #include "application.h"
 #include "led_WS2812.h"
 
+// ✅ Définir la période de lecture des boutons tactiles si pas déjà définie
+#ifndef PERIODE_LECTURE_TOUCH_BUTTONS
+#define PERIODE_LECTURE_TOUCH_BUTTONS 100  // 100 ms pour réactivité instantanée
+#endif
+
 void tests_unitaires(void);
 void test_integration(void);
+
+void start_vibrating_motor(uint8_t dc);
+void stop_vibrating_motor(void);
 
 // Definition des objets et des variables globaux
 GPIO_Pin imu_reset(IMU_RST_GPIO_Port, IMU_RST_Pin);
@@ -66,6 +75,13 @@ volatile rgbled_data_t leds_strip_J7_tmp_data;
 volatile bool leds_strip_J5_change_flag = false;
 volatile bool leds_strip_J6_change_flag = false;
 volatile bool leds_strip_J7_change_flag = false;
+
+// ✅ Flags globaux pour tracker si les boutons ont reçu des données CAN valides
+static bool button1_initialized = false;
+static bool button2_initialized = false;
+static bool button3_initialized = false;
+
+LEDS_color_t touched_color = {0, 0, 0};
 
 MFRC522_t myMFRC522 = { &hspi1, RFID_SS_GPIO_Port, RFID_SS_Pin, RFID_RST_GPIO_Port, RFID_RST_Pin };
 
@@ -142,24 +158,6 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
 
     }
 }
-
-///**
-// *
-// */
-//void strip_leds_set_color(LEDS_color_t color) {
-//    for (int i = 0; i < MAX_LED; i++) {
-//        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
-//    }
-//}
-//
-///**
-// *
-// */
-//void strip_leds_set_brightness(uint8_t brightness) {
-//
-//    leds_strip_J5.set_brightness(brightness);
-//    leds_strip_J7.set_brightness(brightness);
-//}
 
 /**
  *
@@ -282,6 +280,8 @@ void read_IMU(void) {
  * Lecture de l'état des boutons tactiles
  *
  * emission de message ssi il y a un changement d'état
+ *
+ * ✅ Lors du relâchement, on restaure immédiatement la couleur SI des données CAN ont été reçues
  */
 void read_touch_buttons(void) {
 
@@ -291,53 +291,79 @@ void read_touch_buttons(void) {
     bool state_changed = false;
     static uint8_t state_send = 0;
 
+    // Bouton 1
     if (state_button1 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
-            //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, home_color);
-            //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, touched_color);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 0);
             state_button1 = true;
             state_send = 01;
             state_changed = true;
             USER_LOG("Touch buttons : button 1 press detected ");
+
+            start_vibrating_motor(50);  // 50% de puissance
+            time_for_stop_vibrating_motor = HAL_GetTick() + 50;  // 50ms de vibration
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == false) {
-        //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
-        //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
         state_button1 = false;
         state_send = 00;
         state_changed = true;
         USER_LOG("Touch buttons : button 1 released");
+
+        // ✅ Restauration immédiate SEULEMENT si données CAN valides
+        if (button1_initialized) {
+            rgbled_touch_button_1_change_flag = true;
+        }
     }
 
+    // Bouton 2
     if (state_button2 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
-            //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, scroll_color);
-            //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, touched_color);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 0);
             state_button2 = true;
             state_send = 02;
             state_changed = true;
             USER_LOG("Touch buttons : button 2 press detected");
+
+            start_vibrating_motor(50);  // 50% de puissance
+            time_for_stop_vibrating_motor = HAL_GetTick() + 50;  // 50ms de vibration
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == false) {
-        //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, default_color);
-        //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
         state_button2 = false;
         state_send = 00;
         state_changed = true;
         USER_LOG("Touch buttons : button 2 released");
+
+        // ✅ Restauration immédiate SEULEMENT si données CAN valides
+        if (button2_initialized) {
+            rgbled_touch_button_2_change_flag = true;
+        }
     }
+
+    // Bouton 3
     if (state_button3 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == true) {
+            TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, touched_color);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3, 0);
             state_button3 = true;
             state_send = 03;
             state_changed = true;
             USER_LOG("Touch buttons : button 3 press detected");
+
+            start_vibrating_motor(50);  // 50% de puissance
+            time_for_stop_vibrating_motor = HAL_GetTick() + 50;  // 50ms de vibration
         }
     } else if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_3) == false) {
         state_button3 = false;
         state_send = 00;
         state_changed = true;
         USER_LOG("Touch buttons : button 3 released");
+
+        // ✅ Restauration immédiate SEULEMENT si données CAN valides
+        if (button3_initialized) {
+            rgbled_touch_button_3_change_flag = true;
+        }
     }
 
     if (state_changed) {
@@ -425,6 +451,10 @@ uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) 
         rgbled_button_1_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
 
         rgbled_touch_button_1_change_flag = true;
+
+        // ✅ LOG pour debug
+        USER_LOG("CAN Button 1: R=%d G=%d B=%d Mode=%d Shape=%d I=%d",
+            data[2], data[3], data[4], (data[1] & 0x0F), ((data[1] >> 4) & 0x0F), data[5]);
     }
 
     if ((data[0] & 0x02) != 0) {
@@ -436,6 +466,10 @@ uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) 
         rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
 
         rgbled_touch_button_2_change_flag = true;
+
+        // ✅ LOG pour debug
+        USER_LOG("CAN Button 2: R=%d G=%d B=%d Mode=%d Shape=%d I=%d",
+            data[2], data[3], data[4], (data[1] & 0x0F), ((data[1] >> 4) & 0x0F), data[5]);
     }
 
     if ((data[0] & 0x04) != 0) {
@@ -447,6 +481,10 @@ uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) 
         rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
 
         rgbled_touch_button_3_change_flag = true;
+
+        // ✅ LOG pour debug
+        USER_LOG("CAN Button 3: R=%d G=%d B=%d Mode=%d Shape=%d I=%d",
+            data[2], data[3], data[4], (data[1] & 0x0F), ((data[1] >> 4) & 0x0F), data[5]);
     }
 
 
@@ -479,6 +517,16 @@ void change_ledRGB_touch_button_1(void) {
  */
 void change_ledRGB_touch_button_2(void) {
     I2C_data_t data;
+
+    // ✅ LOG pour debug : voir exactement ce qui est envoyé
+    USER_LOG("Button 2 UPDATE: R=%d G=%d B=%d Mode=%d Shape=%d Intensity=%d",
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red,
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.green,
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue,
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedsMode,
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedsShape,
+        rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness
+    );
 
     data.I2C_clientDataArray[1] = RGB_LED_COLOR; // first address
     // LEDS_color_t
@@ -624,6 +672,12 @@ void my_setup(void) {
 
     USER_LOG("---- Application start ! ----");
 
+    // ✅ CRITIQUE : Initialiser les structures à zéro AVANT toute utilisation
+    // Cela évite d'avoir des données aléatoires en mémoire (garbage)
+    memset((void*)&rgbled_button_1_tmp_data, 0, sizeof(rgbled_data_t));
+    memset((void*)&rgbled_button_2_tmp_data, 0, sizeof(rgbled_data_t));
+    memset((void*)&rgbled_button_3_tmp_data, 0, sizeof(rgbled_data_t));
+
     // Initialisation du lecteur de carte
     config_SPI_before_RFID();
     MFRC522_Init(&myMFRC522);
@@ -638,12 +692,45 @@ void my_setup(void) {
     // Initialisation du bus CAN
     can_bus.begin();
 
-    // Initialisation des boutons tactiles
-    LEDS_color_t default_color; // --- Fixer couleur par défaut des boutons ---
-    default_color.red = 10;       // intensité rouge
-    default_color.green = 11;     // intensité verte
-    default_color.blue = 100;      // intensité bleue
+    // Initialisation des boutons tactiles avec couleur par défaut
+    LEDS_color_t default_color;
+    default_color.red = 10;
+    default_color.green = 11;
+    default_color.blue = 100;
 
+    // ✅ Initialiser les structures rgbled_button_X_tmp_data avec les valeurs par défaut
+    // (Nécessaire pour la restauration de couleur lors du relâchement)
+
+    // Bouton 1
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedsMode = FADING_BLINK;
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedsShape = ALL;
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.red = default_color.red;
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.green = default_color.green;
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedsColor.blue = default_color.blue;
+    rgbled_button_1_tmp_data.clientDataStruct.rgbLedBrightness = 255;
+
+    // Bouton 2
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedsMode = FADING_BLINK;
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedsShape = ALL;
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red = default_color.red;
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.green = default_color.green;
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue = default_color.blue;
+    rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness = 255;
+
+    // Bouton 3
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsMode = FADING_BLINK;
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsShape = ALL;
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.red = default_color.red;
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.green = default_color.green;
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.blue = default_color.blue;
+    rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness = 255;
+
+    // ✅ Marquer les boutons comme initialisés (données par défaut valides)
+    button1_initialized = true;
+    button2_initialized = true;
+    button3_initialized = true;
+
+    // Envoyer la configuration initiale aux boutons physiques
     // Bouton 1
     TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, default_color);
     TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
@@ -663,7 +750,7 @@ void my_setup(void) {
     TOUCH_BUTTON_RGB_leds_set_shape(TOUCH_BUTTON_ADDRESS_3, ALL);
 
     can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button);
-    can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor); // @todo : a corriger
+    can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor);
     can_bus.register_callback_function(ARBITRATION_ID_LEDSTRIP_CONFIG, can_bus_callback_leds_strips);
     can_bus.register_callback_function(ARBITRATION_ID_LED_CONFIG, can_bus_callback_debug_led);
     can_bus.register_callback_function(ARBITRATION_ID_TIME_CONFIG, can_bus_callback_uart_tx);
@@ -680,6 +767,7 @@ void my_loop(void) {
     uint32_t time_for_can_bus_automatic_message = 0;
     uint32_t time_for_read_touch_buttons = 0;
     uint32_t time_for_change_led_state = 0;
+    uint32_t time_for_led_keepalive = 30000;  // ✅ Keepalive toutes les 30s (bien avant timeout ~60-75s)
 
     //test_integration();
 
@@ -709,16 +797,17 @@ void my_loop(void) {
         // Données modifiées par le BUS CAN a transmettre au bouton
         if (rgbled_touch_button_1_change_flag) {
             change_ledRGB_touch_button_1();
+            button1_initialized = true;  // ✅ Marquer comme initialisé
         }
 
-        //  Données modifiées par le BUS CAN a transmettre au bouton
         if (rgbled_touch_button_2_change_flag) {
             change_ledRGB_touch_button_2();
+            button2_initialized = true;  // ✅ Marquer comme initialisé
         }
 
-        //  Données modifiées par le BUS CAN a transmettre au bouton
         if (rgbled_touch_button_3_change_flag) {
             change_ledRGB_touch_button_3();
+            button3_initialized = true;  // ✅ Marquer comme initialisé
         }
 
         if (leds_strip_J5_change_flag) {
@@ -748,6 +837,25 @@ void my_loop(void) {
         // Modification état led debug (pour vérifier que l'application fonctionne)
         if (current_time >= time_for_change_led_state) {
             time_for_change_led_state += change_state_user_led();
+        }
+
+        // ✅ Keepalive intelligent : SEULEMENT pour les boutons initialisés via CAN
+        if (current_time >= time_for_led_keepalive) {
+            time_for_led_keepalive += 30000;  // ✅ 30 secondes (bien avant timeout firmware ~60-75s)
+
+            // Rafraîchir SEULEMENT les boutons qui ont reçu des données CAN
+            if (button1_initialized) {
+                USER_LOG("Keepalive button 1");
+                change_ledRGB_touch_button_1();
+            }
+            if (button2_initialized) {
+                USER_LOG("Keepalive button 2");
+                change_ledRGB_touch_button_2();
+            }
+            if (button3_initialized) {
+                USER_LOG("Keepalive button 3");
+                change_ledRGB_touch_button_3();
+            }
         }
     }
 }

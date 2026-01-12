@@ -1,4 +1,4 @@
-/* 
+/*
  * File:   i2c_data.h
  * Author: phifo
  *
@@ -48,7 +48,7 @@ typedef union I2C_DATA {
 
 		int8_t proximityThreshold;      // 1 octet
 		int8_t proximityScale;          // 1 octet
-     
+
 		uint8_t debugLedState;          // 1 octet
 	} I2C_clientDataStruct;
 } I2C_data_t;

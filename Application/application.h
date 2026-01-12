@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+// ✅ AJOUT : Inclure common_data.h pour définir LEDS_color_t
+#include "../../Common/common_data.h"
+
 //#define PRINT_DEBUG 1
 #define ENABLE_USER_LOG   1
 #define ENABLE_DEBUG_LOG  0
@@ -20,7 +23,7 @@ extern "C" {
 
 #define PERIODE_LECTURE_RFID 50
 #define PERIODE_LECTURE_IMU 250
-#define PERIODE_LECTURE_TOUCH_BUTTONS 150
+#define PERIODE_LECTURE_TOUCH_BUTTONS 100
 #define PERIODE_CAN_BUS_AUTOMATIC_MESSAGE 10000
 
 #define USER_LED_LOW_TIME 950
@@ -42,9 +45,12 @@ extern "C" {
 //#define LEDS_STRIPS_J6_NB_LEDS 2
 //#define LEDS_STRIPS_J7_NB_LEDS 31
 
-#define LEDS_STRIPS_J5_NB_LEDS 5
-#define LEDS_STRIPS_J6_NB_LEDS 6
-#define LEDS_STRIPS_J7_NB_LEDS 7
+#define LEDS_STRIPS_J5_NB_LEDS 22
+#define LEDS_STRIPS_J6_NB_LEDS 22
+#define LEDS_STRIPS_J7_NB_LEDS 22
+
+// ✅ CORRECTION : Déclaration externe de touched_color
+extern LEDS_color_t touched_color;
 
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
