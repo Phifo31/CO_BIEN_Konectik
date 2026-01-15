@@ -7,6 +7,13 @@
 //  Liste des Arbitration IDs utilisés dans le système CAN <-> MQTT
 // ============================================================================
 
+
+#define SPD_ADRESS_SENSOR_SOUTH     1140    // 0x474
+#define SPD_ADRESS_SENSOR_NORTH     1141    // 0x475
+#define SPD_ADRESS_SENSOR_EAST      1142    // 0x476
+#define SPD_ADRESS_SENSOR_WEST      1143    // 0x477
+
+
 typedef enum {
     // RFID
     ARBITRATION_ID_RFID_INIT          = 1110,

@@ -65,6 +65,8 @@ typedef union I2C_DATA {
 #define TOUCH_BUTTON_PRESSED 0xAC
 #define TOUCH_BUTTON_RELEASED 0x53
 
+#define MAX_LED 100
+#define USE_BRIGHTNESS 1
 
 //extern volatile uint8_t * I2C_clientDataArray = IC2_data.I2C_clientDataArray;
 void I2C_DATA_initialize(void);

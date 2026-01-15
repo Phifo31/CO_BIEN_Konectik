@@ -17,7 +17,7 @@
 #include "application.h"
 #include "touch_button.h"
 #include "RFID_MFRC522.h"
-#include "led_WS2812.h"
+#include "Led_WS2812.h"
 #include "can_bus.h"
 
 #include "GPIO_Pin.h"
@@ -70,9 +70,9 @@ void change_ledRGB_touch_button_1(void);
 void change_ledRGB_touch_button_2(void);
 void change_ledRGB_touch_button_3(void);
 uint32_t change_state_user_led(void);
-void change_leds_strips_J5(void);
-void change_leds_strips_J6(void);
-void change_leds_strips_J7(void);
+uint32_t change_leds_strips_J5(uint32_t last);
+uint32_t change_leds_strips_J6(uint32_t last);
+uint32_t change_leds_strips_J7(uint32_t last);
 
 /**
  * Test de la led de la carte nucleo et du print redirigé sur la liaison série et l'USB de la carte Nucleo
@@ -1093,15 +1093,14 @@ void test_complet_3_12_2025(void) {
         }
 
         if (leds_strip_J5_change_flag) {
-            change_leds_strips_J5();
+            change_leds_strips_J5(0);
         }
         if (leds_strip_J6_change_flag) {
-            change_leds_strips_J6();
+            change_leds_strips_J6(0);
         }
         if (leds_strip_J7_change_flag) {
-            change_leds_strips_J7();
+            change_leds_strips_J7(0);
         }
-
 
         // Test moteur vibrant
         if (current_time >= time_for_vibrating_motor) {
@@ -1129,6 +1128,56 @@ void test_complet_3_12_2025(void) {
     }
 }
 
+void test_mode_strip_leds (void) {
+
+    uint8_t data[6];
+    uint32_t current_time = 0;
+    uint32_t time_for_change_led_strip_J5 = 1000;
+    uint32_t time_for_change_led_strip_J6 = 1100;
+    uint32_t time_for_change_led_strip_J7 = 1200;
+
+    USER_LOG("---- Test application start main loop ----");
+
+    data[0] = 1; // num binaire bandeau
+    data[1] = 255; // red
+    data[2] = 10; // green
+    data[3] = 10; // blue
+    data[4] = 99; // brightness
+    data[5] = BLINK;
+    can_bus_callback_leds_strips(0xffff, data);
+
+    data[0] = 2; // num binaire bandeau
+    data[1] = 20; // red
+    data[2] = 200; // green
+    data[3] = 10; // blue
+    data[4] = 99; // brightness
+    data[5] = FADING_BLINK;
+    can_bus_callback_leds_strips(0xffff, data);
+
+    data[0] = 4; // num binaire bandeau
+    data[1] = 50; // red
+    data[2] = 10; // green
+    data[3] = 255; // blue
+    data[4] = 99; // brightness
+    data[5] = ON;
+    can_bus_callback_leds_strips(0xffff, data);
+
+    while (ENDLESS_LOOP) {
+        current_time = HAL_GetTick();
+
+        if ((current_time >= time_for_change_led_strip_J5) || leds_strip_J5_change_flag) {
+            time_for_change_led_strip_J5 = change_leds_strips_J5(time_for_change_led_strip_J5);
+        }
+
+        if ((current_time >= time_for_change_led_strip_J6) || leds_strip_J6_change_flag) {
+            time_for_change_led_strip_J6 = change_leds_strips_J6(time_for_change_led_strip_J6);
+        }
+
+        if ((current_time >= time_for_change_led_strip_J7) || leds_strip_J7_change_flag) {
+            time_for_change_led_strip_J7 = change_leds_strips_J7(time_for_change_led_strip_J7);
+        }
+    }
+}
 /**
  *:
  */
@@ -1163,7 +1212,8 @@ void tests_unitaires(void) {
  *:
  */
 void test_integration(void) {
-    test_complet_3_12_2025();
+    //test_complet_3_12_2025();
+    test_mode_strip_leds();
 }
 
 // End of file

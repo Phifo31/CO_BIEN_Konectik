@@ -12,7 +12,6 @@
 extern "C" {
 #endif
 
-
 #define WS2812_PWM_DATA_ONE 60 // 2/3 of 90
 #define WS2812_PWM_DATA_ZERO 30  // 1/3 of 90
 
@@ -28,6 +27,7 @@ public:
      *
      */
     void set_color(uint8_t led_num, uint8_t red, uint8_t green, uint8_t blue);
+    void set_color(uint8_t red, uint8_t green, uint8_t blue);
 
     /**
      *
@@ -39,27 +39,44 @@ public:
      */
     void send(void);
 
-    /**
-     *
-     */
-    void reset_flag(void);
+    void set_off(void);
+
 
     /**
      *
      */
-    uint16_t nb_leds (void);
+    void do_fading(uint8_t step);
+
+    /**
+     * Getters and setters
+     */
+    uint16_t nb_leds (void) {return nb_leds_; };
+    LEDS_mode_t mode (void) {return mode_; };
+    void set_mode (LEDS_mode_t m) {mode_ = m; };
+    bool state (void) {return state_;};
+    void toggle_state (void) {state_ = !state_; };
+
+    void reset_flag(void);
+    void set_data_sent_flag (void);
+    bool data_sent_flag (void);
+
 
 private:
-    uint8_t LED_data_[MAX_LED][4];
 
-    bool datasentflag_;
+    uint8_t LED_data_[MAX_LED][4];
 
 #if USE_BRIGHTNESS
         uint8_t LED_mod_[MAX_LED][4];  // for brightness
 #endif
 
+
 uint32_t timer_channel_;
 uint16_t nb_leds_;
+LEDS_mode_t mode_;
+
+bool state_ = false;
+uint8_t fadelevel_;
+int8_t direction_;
 
 void leds_strip_set_color (LEDS_color_t color);
 void leds_strip_set_mode (LEDS_mode_t mode);

@@ -35,8 +35,7 @@ extern "C" {
 #define TOUCH_BUTTON_ADDRESS_2    0x48
 #define TOUCH_BUTTON_ADDRESS_3    0x68
 
-#define MAX_LED 100
-#define USE_BRIGHTNESS 1
+
 
 //#define LEDS_STRIPS_J5_NB_LEDS 28
 //#define LEDS_STRIPS_J6_NB_LEDS 2
