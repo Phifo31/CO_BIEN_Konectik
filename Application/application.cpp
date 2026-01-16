@@ -360,7 +360,7 @@ void read_touch_buttons(void) {
 //        USER_LOG("Touch buttons : button 3 released");
 //    }
 
-    if (state_changed) {
+   	  if (state_changed) {
         HAL_StatusTypeDef canbus_status;
         uint8_t toSend[8] = { 0 };
 
@@ -908,8 +908,10 @@ void my_loop(void) {
     uint32_t time_for_change_led_state = 0;
     uint32_t time_for_led_keepalive = 30000;  //  Keepalive toutes les 30s (bien avant timeout ~60-75s)
 
-    test_integration();
-
+    //test_integration();
+    uint32_t time_for_change_led_strip_J5 = 2000;
+    uint32_t time_for_change_led_strip_J6 = 2000;
+    uint32_t time_for_change_led_strip_J7 = 2000;
     USER_LOG("---- Application start main loop ----");
 
     while (ENDLESS_LOOP) {
@@ -950,8 +952,8 @@ void my_loop(void) {
             button3_initialized = true;  //  Marquer comme initialisé
         }
 
-        if (leds_strip_J5_change_flag) {
-            change_leds_strips_J5();
+        if ((current_time >= time_for_change_led_strip_J5) || leds_strip_J5_change_flag) {
+            time_for_change_led_strip_J5 = change_leds_strips_J5(time_for_change_led_strip_J5);
         }
 
         if ((current_time >= time_for_change_led_strip_J6) || leds_strip_J6_change_flag) {
