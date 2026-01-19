@@ -33,7 +33,7 @@ extern "C" {
 
 #define TOUCH_BUTTON_ADDRESS_1    0x38
 #define TOUCH_BUTTON_ADDRESS_2    0x48
-#define TOUCH_BUTTON_ADDRESS_3    0x68
+
 
 
 

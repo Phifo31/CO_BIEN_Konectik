@@ -34,6 +34,8 @@ extern LED_WS2812 leds_strip_J7;
 extern CAN_BUS can_bus;
 extern MFRC522_t myMFRC522;
 
+#define TOUCH_BUTTON_ADDRESS_3    0x68
+
 //                         Red, Green, Blue
 LEDS_color_t COLOR_RED = { 0xFF, 0x00, 0x00 };
 LEDS_color_t COLOR_GREEN = { 0x00, 0xFF, 0x00 };

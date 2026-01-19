@@ -5,6 +5,8 @@
  *      Author: phifo
  */
 
+#include <stdio.h>
+
 #include "main.h"
 
 #include "application.h"
@@ -101,8 +103,13 @@ bool TOUCH_BUTTON_get_button_state(uint8_t address) {
                 return true;
             if (data[0] == TOUCH_BUTTON_RELEASED)
                 return false;
+        } else {
+            USER_LOG("read touch button phase 2 : HAL_ERROR adresse : %X", address);
         }
+    } else {
+        USER_LOG("read touch button phase 1 : HAL_ERROR adresse : %X", address);
     }
+
     return false;
 }
 

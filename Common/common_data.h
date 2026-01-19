@@ -53,7 +53,7 @@ typedef union I2C_DATA {
 	} I2C_clientDataStruct;
 } I2C_data_t;
 
-#define RGB_LED_STATE   0x01
+#define RGB_LED_STATE_   0x01
 #define RGB_LED_COLOR	0x02
 #define RGB_LED_MODE	0x05
 #define RGB_LED_INTENSITY 0x06
