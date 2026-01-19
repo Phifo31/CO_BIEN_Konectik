@@ -22,6 +22,10 @@ static bool _reset_occurred = false;
 static sh2_SensorValue_t *_sensor_value = NULL;
 extern Adafruit_BNO08x bno08x;
 
+//  NOUVEAU : Déclaration des variables configurables via CAN (définies dans application.cpp)
+extern volatile uint16_t imu_motion_threshold;
+extern volatile uint16_t imu_immobile_time_ms;
+
 #define SPI_READ_TIMEOUT	0x1000
 #define SPI_WRITE_TIMEOUT	0x1000
 
@@ -370,8 +374,14 @@ void Adafruit_BNO08x::setup(void) {
 }
 
 /**
+ *  MODIFIÉ : Détection de changement d'état avec paramètres configurables via CAN
  *
- * @todo : pourquoi cette fonction n'appartient pas à l'objet ?
+ * Les seuils sont maintenant des variables globales modifiables :
+ * - imu_motion_threshold : Seuil de détection de mouvement (modifiable via CAN ID 1610)
+ * - imu_immobile_time_ms : Temps d'immobilité en ms (modifiable via CAN ID 1710)
+ *
+ * @param values : Pointeur vers les valeurs du capteur
+ * @return imu_state_t : État détecté (NO_CHANGE, MOVEMENT_DETECTED, IMMOBILE_DETECTED)
  */
 imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values) {
     static bool firstRead = true;
@@ -392,7 +402,10 @@ imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values) {
             firstRead = false;
             lastMotionTime = HAL_GetTick();
         } else {
-            bool motionDetected = quaternionHasMotion(q, lastQuat, IMU_MOTION_THRESHOLD);
+            //  MODIFIÉ : Conversion uint16_t → float et utilisation de la variable configurable
+            float threshold_float = (float)imu_motion_threshold / 10000.0f;  // Ex: 100 → 0.0100
+            bool motionDetected = quaternionHasMotion(q, lastQuat, threshold_float);
+
             lastQuat.x = q.x;
             lastQuat.y = q.y;
             lastQuat.z = q.z;
@@ -401,14 +414,15 @@ imu_state_t IMU_change_state_detection(sh2_SensorValue_t *values) {
             if (motionDetected) {
                 lastMotionTime = HAL_GetTick();
                 if (isImmobile) {
-                    DEBUG_LOG("BNO085 : Mouvement détecté !");
+                    DEBUG_LOG("BNO085 : Mouvement détecté ! (seuil=%.5f)", threshold_float);
                     isImmobile = false;
                     state = MOVEMENT_DETECTED;
                 }
             } else {
-                if (!isImmobile && ((HAL_GetTick() - lastMotionTime) > IMU_IMMOBILE_TIME_MS)) {
+                //  MODIFIÉ : Utilisation de la variable configurable pour le timeout
+                if (!isImmobile && ((HAL_GetTick() - lastMotionTime) > imu_immobile_time_ms)) {
                     isImmobile = true;
-                    DEBUG_LOG("BNO085 : Immobile depuis %u ms ", IMU_IMMOBILE_TIME_MS);
+                    DEBUG_LOG("BNO085 : Immobile depuis %u ms ", imu_immobile_time_ms);
                     state = IMMOBILE_DETECTED;
                 }
             }
