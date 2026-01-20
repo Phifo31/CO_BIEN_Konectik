@@ -21,13 +21,17 @@
 
 #include "application.h"
 #include "Led_WS2812.h"
+
 #ifndef PERIODE_LECTURE_TOUCH_BUTTONS
 #define PERIODE_LECTURE_TOUCH_BUTTONS 100  // 100 ms pour réactivité instantanée
 #endif
+
 void tests_unitaires(void);
 void test_integration(void);
 void start_vibrating_motor(uint8_t dc);
 void stop_vibrating_motor(void);
+
+
 // Definition des objets et des variables globaux
 GPIO_Pin imu_reset(IMU_RST_GPIO_Port, IMU_RST_Pin);
 GPIO_Pin imu_cs(IMU_CS_GPIO_Port, IMU_CS_Pin);
@@ -58,22 +62,18 @@ typedef union RGBLED_TOUCH_BUTTON_DATA {
 
 volatile rgbled_data_t rgbled_button_1_tmp_data;
 volatile rgbled_data_t rgbled_button_2_tmp_data;
-volatile rgbled_data_t rgbled_button_3_tmp_data;
-
 volatile bool rgbled_touch_button_1_change_flag = false;
 volatile bool rgbled_touch_button_2_change_flag = false;
-volatile bool rgbled_touch_button_3_change_flag = false;
+static bool button1_initialized = false;
+static bool button2_initialized = false;
 
 volatile rgbled_data_t leds_strip_J5_tmp_data;
 volatile rgbled_data_t leds_strip_J6_tmp_data;
 volatile rgbled_data_t leds_strip_J7_tmp_data;
-
 volatile bool leds_strip_J5_change_flag = false;
 volatile bool leds_strip_J6_change_flag = false;
 volatile bool leds_strip_J7_change_flag = false;
-static bool button1_initialized = false;
-static bool button2_initialized = false;
-static bool button3_initialized = false;
+
 volatile uint16_t imu_motion_threshold = 100;        // Seuil de détection (défaut: 100 → 0.0100)
 volatile uint16_t imu_immobile_time_ms = 5000;       // Temps d'immobilité en ms (défaut: 5000ms)
 
@@ -104,7 +104,7 @@ uint16_t msec2sec(uint32_t n, uint16_t *reste) {
 }
 
 /**
- * Gestion de la led de vie (tant qu'elle n'est pas utilisée par le BUS CAN
+ * Gestion de la led de vie (tant qu'elle n'est pas utilisée par le BUS CAN)
  *
  */
 uint32_t change_state_user_led(void) {
@@ -153,24 +153,6 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
 
     }
 }
-
-///**
-// *
-// */
-//void strip_leds_set_color(LEDS_color_t color) {
-//    for (int i = 0; i < MAX_LED; i++) {
-//        leds_strip_J5.set_color(i, color.red, color.green, color.blue);
-//    }
-//}
-//
-///**
-// *
-// */
-//void strip_leds_set_brightness(uint8_t brightness) {
-//
-//    leds_strip_J5.set_brightness(brightness);
-//    leds_strip_J7.set_brightness(brightness);
-//}
 
 /**
  *
@@ -298,14 +280,13 @@ void read_touch_buttons(void) {
 
     static bool state_button1 = false;
     static bool state_button2 = false;
-    //static bool state_button3 = false;
     bool state_changed = false;
     static uint8_t state_send = 0;
 
     if (state_button1 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_1) == true) {
             //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_1, home_color);
-            //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 255);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_1, 0);
             state_button1 = true;
             state_send = 01;
             state_changed = true;
@@ -324,11 +305,11 @@ void read_touch_buttons(void) {
             rgbled_touch_button_1_change_flag = true;
         }
     }
-    HAL_Delay(5);
+    HAL_Delay(3);
     if (state_button2 == false) {
         if (TOUCH_BUTTON_get_button_state(TOUCH_BUTTON_ADDRESS_2) == true) {
             //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_2, scroll_color);
-            //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 255);
+            TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_2, 0);
             state_button2 = true;
             state_send = 02;
             state_changed = true;
@@ -420,8 +401,8 @@ uint16_t can_bus_callback_uart_tx(uint16_t sender, uint8_t data[6]) {
 /**
  * Modification état led bouton tactile
  *
- * NB : Cette fonction est appellée par IT donc interdiction
- * d'appeler directement les communications I2C ou SPI dans cette interruption
+ * NB : Cette fonction est appelée par IT donc interdiction
+ * d'appeler directement les communications USART, I2C ou SPI dans cette interruption
  * A la place, positionnement d'un drapeau traité par la tâche de fond
  */
 uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) {
@@ -435,9 +416,6 @@ uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) 
         rgbled_button_1_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
 
         rgbled_touch_button_1_change_flag = true;
-        // LOG pour debug
-        USER_LOG("CAN Button 1: R=%d G=%d B=%d Mode=%d Shape=%d I=%d", data[2], data[3], data[4], (data[1] & 0x0F),
-                ((data[1] >> 4) & 0x0F), data[5]);
     }
 
     if ((data[0] & 0x02) != 0) {
@@ -449,23 +427,6 @@ uint16_t can_bus_callback_ledRGB_touch_button(uint16_t sender, uint8_t data[6]) 
         rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
 
         rgbled_touch_button_2_change_flag = true;
-// ✅ LOG pour debug
-        USER_LOG("CAN Button 2: R=%d G=%d B=%d Mode=%d Shape=%d I=%d", data[2], data[3], data[4], (data[1] & 0x0F),
-                ((data[1] >> 4) & 0x0F), data[5]);
-    }
-
-    if ((data[0] & 0x04) != 0) {
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedsMode = (LEDS_mode_t) (data[1] & 0x0F);
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedsShape = (LEDS_shape_t) ((data[1] >> 4) & 0x0F);
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.red = data[2];
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.green = data[3];
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.blue = data[4];
-        rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness = data[5];
-
-        rgbled_touch_button_3_change_flag = true;
-// ✅ LOG pour debug
-        USER_LOG("CAN Button 3: R=%d G=%d B=%d Mode=%d Shape=%d I=%d", data[2], data[3], data[4], (data[1] & 0x0F),
-                ((data[1] >> 4) & 0x0F), data[5]);
     }
 
     return 0;
@@ -498,14 +459,6 @@ void change_ledRGB_touch_button_1(void) {
 void change_ledRGB_touch_button_2(void) {
     I2C_data_t data;
 
-    //  LOG pour debug : voir exactement ce qui est envoyé
-    USER_LOG("Button 2 UPDATE: R=%d G=%d B=%d Mode=%d Shape=%d Intensity=%d",
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.green,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedsMode,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedsShape,
-            rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness);
     data.I2C_clientDataArray[1] = RGB_LED_COLOR; // first address
     // LEDS_color_t
     data.I2C_clientDataStruct.rgbLedsColor.red = rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.red;
@@ -521,26 +474,6 @@ void change_ledRGB_touch_button_2(void) {
     rgbled_touch_button_2_change_flag = false;
 }
 
-///**
-// *
-// */
-//void change_ledRGB_touch_button_3(void) {
-//    I2C_data_t data;
-//
-//    data.I2C_clientDataArray[1] = RGB_LED_COLOR; // first address
-//    // LEDS_color_t
-//    data.I2C_clientDataStruct.rgbLedsColor.red = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.red;
-//    data.I2C_clientDataStruct.rgbLedsColor.green = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.green;
-//    data.I2C_clientDataStruct.rgbLedsColor.blue = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.blue;
-//
-//    data.I2C_clientDataStruct.rgbLedsMode = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsMode;
-//    data.I2C_clientDataStruct.rgbLedIntensity = rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness;
-//    data.I2C_clientDataStruct.rgbLedsBlinkTempo = 100;
-//    data.I2C_clientDataStruct.rgbLedShape = rgbled_button_3_tmp_data.clientDataStruct.rgbLedsShape;
-//
-//    TOUCH_BUTTON_RGB_leds_set_RGB(TOUCH_BUTTON_ADDRESS_3, data.I2C_clientDataArray + 1, 8);
-//    rgbled_touch_button_3_change_flag = false;
-//}
 
 /**
  *  Modification état leds adressables : leds strips
@@ -621,6 +554,9 @@ uint32_t change_leds_strips_J5(uint32_t last) {
     return next;
 }
 
+/**
+ *
+ */
 uint32_t change_leds_strips_J6(uint32_t last) {
     uint32_t next = 0xFFFFFFFF;
 
@@ -794,7 +730,6 @@ void my_setup(void) {
     // Cela évite d'avoir des données aléatoires en mémoire (garbage)
     memset((void*) &rgbled_button_1_tmp_data, 0, sizeof(rgbled_data_t));
     memset((void*) &rgbled_button_2_tmp_data, 0, sizeof(rgbled_data_t));
-    memset((void*) &rgbled_button_3_tmp_data, 0, sizeof(rgbled_data_t));
 
     // Initialisation du lecteur de carte
     config_SPI_before_RFID();
@@ -835,18 +770,9 @@ void my_setup(void) {
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedsColor.blue = default_color.blue;
     rgbled_button_2_tmp_data.clientDataStruct.rgbLedBrightness = 255;
 
-    // Bouton 3
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsMode = FADING_BLINK;
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsShape = ALL;
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.red = default_color.red;
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.green = default_color.green;
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedsColor.blue = default_color.blue;
-    rgbled_button_3_tmp_data.clientDataStruct.rgbLedBrightness = 255;
-
     //  Marquer les boutons comme initialisés (données par défaut valides)
     button1_initialized = true;
     button2_initialized = true;
-    button3_initialized = true;
 
     // Envoyer la configuration initiale aux boutons physiques
     // Bouton 1
@@ -863,12 +789,6 @@ void my_setup(void) {
 
     uint8_t tmpData[6] = { 0x07, default_color.red, default_color.green, default_color.blue, 255, 0 };
     can_bus_callback_leds_strips(ARBITRATION_ID_LEDSTRIP_CONFIG, tmpData);
-
-    // Bouton 3
-    //TOUCH_BUTTON_RGB_leds_set_color(TOUCH_BUTTON_ADDRESS_3, default_color);
-    //TOUCH_BUTTON_RGB_leds_set_intensity(TOUCH_BUTTON_ADDRESS_3, 255);
-    //TOUCH_BUTTON_RGB_leds_set_mode(TOUCH_BUTTON_ADDRESS_3, FADING_BLINK);
-    //TOUCH_BUTTON_RGB_leds_set_shape(TOUCH_BUTTON_ADDRESS_3, ALL);
 
     can_bus.register_callback_function(ARBITRATION_ID_BUTTONS_CONFIG, can_bus_callback_ledRGB_touch_button);
     can_bus.register_callback_function((arbitrationId_t) 0x8888, can_bus_callback_vibrating_motor);
@@ -969,24 +889,20 @@ void my_loop(void) {
             time_for_change_led_state += change_state_user_led();
         }
 
-        //  Keepalive intelligent : SEULEMENT pour les boutons initialisés via CAN
-        if (current_time >= time_for_led_keepalive) {
-            time_for_led_keepalive += 30000;  //  30 secondes (bien avant timeout firmware ~60-75s)
-
-// Rafraîchir SEULEMENT les boutons qui ont reçu des données CAN
-            if (button1_initialized) {
-                USER_LOG("Keepalive button 1");
-                change_ledRGB_touch_button_1();
-            }
-            if (button2_initialized) {
-                USER_LOG("Keepalive button 2");
-                change_ledRGB_touch_button_2();
-            }
-            //if (button3_initialized) {
-            //    USER_LOG("Keepalive button 3");
-            //    change_ledRGB_touch_button_3();
-            //}
-        }
+//        //  Keepalive intelligent : SEULEMENT pour les boutons initialisés via CAN
+//        if (current_time >= time_for_led_keepalive) {
+//            time_for_led_keepalive += 30000;  //  30 secondes (bien avant timeout firmware ~60-75s)
+//
+//            // Rafraîchir SEULEMENT les boutons qui ont reçu des données CAN
+//            if (button1_initialized) {
+//                USER_LOG("Keepalive button 1");
+//                change_ledRGB_touch_button_1();
+//            }
+//            if (button2_initialized) {
+//                USER_LOG("Keepalive button 2");
+//                change_ledRGB_touch_button_2();
+//            }
+//        }
     }
 }
 
