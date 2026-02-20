@@ -649,7 +649,8 @@ uint32_t change_leds_strips_J7(uint32_t last) {
  * dc : duty cycle in ]0..99] interval
  */
 void start_vibrating_motor(uint8_t dc) {
-    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, dc);
+//    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, dc);
+    __HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, 100);
     HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 }
 
@@ -816,7 +817,7 @@ void my_loop(void) {
     uint32_t time_for_change_led_strip_J5 = 2000;
     uint32_t time_for_change_led_strip_J6 = 2000;
     uint32_t time_for_change_led_strip_J7 = 2000;
-    uint32_t time_for_led_keepalive = 30000;//  Keepalive toutes les 30s (bien avant timeout ~60-75s)
+    //uint32_t time_for_led_keepalive = 30000;//  Keepalive toutes les 30s (bien avant timeout ~60-75s)
 
     //test_integration();
 

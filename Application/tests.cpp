@@ -905,11 +905,9 @@ void test_driver_moteur_vibrant(void) {
         HAL_Delay(1900);
     }
 
-    //uint16_t can_bus_callback_vibrating_motor(uint16_t sender, uint8_t data[6]);
-
     while (ENDLESS_LOOP) {
-        data[0] = 10; // durée
-        data[1] = 40; // rapport cyclique
+        data[0] = 20; // durée
+        data[1] = 100; // rapport cyclique
 
         can_bus_callback_vibrating_motor(0xffff, data);
         while (HAL_GetTick() <= time_for_stop_vibrating_motor)
@@ -974,7 +972,6 @@ void test_complet_3_12_2025(void) {
                 data[4] = 21; // blue
                 data[5] = 255; // brightnes
                 can_bus_callback_ledRGB_touch_button(0xffff, data);
-
 
             } else if (tmp == 0xd4) {
                 data[0] = 4; // num binaire bandeau
@@ -1130,7 +1127,7 @@ void test_complet_3_12_2025(void) {
     }
 }
 
-void test_mode_strip_leds (void) {
+void test_mode_strip_leds(void) {
 
     uint8_t data[6];
     uint32_t current_time = 0;
@@ -1180,6 +1177,40 @@ void test_mode_strip_leds (void) {
         }
     }
 }
+
+void test_retour_haptique(void) {
+    uint32_t current_time = 0;
+    uint32_t time_for_read_touch_buttons = 0;
+
+    while (ENDLESS_LOOP) {
+        current_time = HAL_GetTick();
+
+        // Lecture état boutons tactiles
+        if (current_time >= time_for_read_touch_buttons) {
+            time_for_read_touch_buttons += PERIODE_LECTURE_TOUCH_BUTTONS;
+            read_touch_buttons();
+
+            // Arrêt moteur vibrant
+            if (current_time >= time_for_stop_vibrating_motor) {
+                stop_vibrating_motor();
+            }
+
+            // Données modifiées par le BUS CAN a transmettre au bouton
+            if (rgbled_touch_button_1_change_flag) {
+                change_ledRGB_touch_button_1();
+                //button1_initialized = true;  //  Marquer comme initialisé
+            }
+
+            //  Données modifiées par le BUS CAN a transmettre au bouton
+            if (rgbled_touch_button_2_change_flag) {
+                change_ledRGB_touch_button_2();
+                //button2_initialized = true;  //  Marquer comme initialisé
+            }
+
+        }
+    }
+}
+
 /**
  *:
  */
@@ -1215,7 +1246,9 @@ void tests_unitaires(void) {
  */
 void test_integration(void) {
     //test_complet_3_12_2025();
-    test_mode_strip_leds();
+    //ftest_mode_strip_leds();
+    //test_driver_moteur_vibrant();
+    test_retour_haptique();
 }
 
 // End of file
