@@ -41,9 +41,9 @@ extern "C" {
 //#define LEDS_STRIPS_J6_NB_LEDS 2
 //#define LEDS_STRIPS_J7_NB_LEDS 31
 
-#define LEDS_STRIPS_J5_NB_LEDS 5
-#define LEDS_STRIPS_J6_NB_LEDS 6
-#define LEDS_STRIPS_J7_NB_LEDS 7
+#define LEDS_STRIPS_J5_NB_LEDS 25
+#define LEDS_STRIPS_J6_NB_LEDS 25
+#define LEDS_STRIPS_J7_NB_LEDS 65
 
 extern I2C_HandleTypeDef hi2c1;
 extern SPI_HandleTypeDef hspi1;
