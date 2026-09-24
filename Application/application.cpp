@@ -732,6 +732,9 @@ void my_setup(void) {
     memset((void*) &rgbled_button_1_tmp_data, 0, sizeof(rgbled_data_t));
     memset((void*) &rgbled_button_2_tmp_data, 0, sizeof(rgbled_data_t));
 
+    // Problème de démarrage de l'IMU
+    HAL_Delay(1000); // lui maisser le temps de démarrer
+
     // Initialisation du lecteur de carte
     config_SPI_before_RFID();
     MFRC522_Init(&myMFRC522);
