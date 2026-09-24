@@ -31,4 +31,4 @@ b) la bibliothèque permettant le dialogue avec l'IMU BNO085
     Utilisation de PF1 pour une sortie GPIO vers l'IMU, les autres fonctions de PF1 sont désactivées 
 
 test git
-
+test git directement sur github !
